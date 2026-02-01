@@ -296,7 +296,15 @@
         // --- GAME OBJECTS ---
         const bg = {
             draw: function () {
-                ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                // 1. SAFETY: Clear screen with Blue Color first
+                // This ensures no trails appear even if image fails
+                ctx.fillStyle = "#70c5ce";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 2. Draw Background Image on top (only if it loaded correctly)
+                if (bgImg.complete && bgImg.naturalHeight !== 0) {
+                    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                }
             }
         }
 
@@ -459,4 +467,5 @@
         }
     </script>
 </body>
+
 </html>
