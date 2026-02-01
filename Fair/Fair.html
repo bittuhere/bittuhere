@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>
+        // SECURITY CHECK
+        // If user is not logged in, kick them to login.html
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = '../LoginPlease/login.html';
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coming Soon | Fair</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@400;600&display=swap');
+
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f1805 0%, #000000 100%);
+            --primary: #2ecc71;
+            /* Neon Green */
+            --accent: #27ae60;
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-gradient);
+            color: var(--text);
+            font-family: 'Teko', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        /* CARD CONTAINER */
+        .container {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 20px;
+            border: 1px solid rgba(46, 204, 113, 0.2);
+            /* Green border */
+            box-shadow: 0 0 50px rgba(46, 204, 113, 0.1);
+            max-width: 500px;
+            width: 90%;
+            animation: popUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* ANIMATED GEAR ICON */
+        .icon-container {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            display: inline-block;
+            animation: spin 8s linear infinite;
+            text-shadow: 0 0 20px var(--primary);
+        }
+
+        /* HEADINGS */
+        h1 {
+            font-size: 4rem;
+            margin: 0;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(to bottom, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 1.1rem;
+            color: #888;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+
+        /* FAKE NOTIFY INPUT */
+        .notify-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            padding: 10px 15px;
+            border-radius: 5px;
+            color: white;
+            outline: none;
+            width: 60%;
+        }
+
+        .notify-btn {
+            background: var(--primary);
+            border: none;
+            color: black;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Segoe UI', sans-serif;
+            transition: 0.3s;
+        }
+
+        .notify-btn:hover {
+            background: white;
+            box-shadow: 0 0 15px white;
+        }
+
+        /* BACK BUTTON */
+        .btn-back {
+            text-decoration: none;
+            color: var(--primary);
+            font-size: 1.2rem;
+            border: 1px solid var(--primary);
+            padding: 10px 30px;
+            border-radius: 50px;
+            transition: all 0.3s;
+            display: inline-block;
+            font-family: 'Segoe UI', sans-serif;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .btn-back:hover {
+            background: var(--primary);
+            color: black;
+            box-shadow: 0 0 20px var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* ANIMATIONS */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes popUp {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="icon-container">⚙️</div>
+
+        <h1>Coming Soon</h1>
+        <p>We are working for Fair Copies! <br> Stay tuned for updates.</p>
+        <a href="../index.html" class="btn-back">← Back to Menu</a>
+    </div>
+
+</body>
+
+</html>
