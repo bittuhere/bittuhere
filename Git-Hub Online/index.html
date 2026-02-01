@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Hub</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+
+            /* Category Colors */
+            --study: linear-gradient(45deg, #ff9966, #ff5e62);
+            --multi: linear-gradient(45deg, #00f3ff, #0099ff);
+            --single: linear-gradient(45deg, #a8ff78, #78ffd6);
+            --contact: linear-gradient(45deg, #FFD700, #ff8c00); /* Gold/Orange */
+
+            /* Game Colors */
+            --pacman: linear-gradient(45deg, #f1c40f, #e67e22);
+            --flappy: linear-gradient(45deg, #3498db, #2980b9);
+            --rps: linear-gradient(45deg, #e74c3c, #c0392b);
+            --car: linear-gradient(45deg, #ff00ff, #9900ff);
+            --fair: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            position: relative;
+        }
+
+        /* --- TOP LEFT: FRIENDS BUTTON --- */
+        .friends-btn-top {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            display: flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        .friends-btn-top:hover {
+            background: #00f3ff; border-color: transparent; color: black;
+            box-shadow: 0 0 15px #00f3ff; transform: translateY(-2px);
+        }
+
+        /* --- TOP RIGHT: LEADERBOARD BUTTON --- */
+        .leaderboard-btn-top {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            color: #ffcc00;
+            padding: 10px 20px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: bold;
+            display: flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        .leaderboard-btn-top:hover {
+            background: #ffcc00; color: black;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); transform: translateY(-2px);
+        }
+
+        /* --- CONTAINER --- */
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            animation: floatUp 0.8s ease-out;
+        }
+
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
+        .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 1.1rem; }
+
+        /* --- GRID LAYOUT --- */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 2rem;
+        }
+        .game-list-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 2rem;
+        }
+
+        /* --- BUTTON STYLES --- */
+        .game-btn {
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            font-size: 1.3rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            text-align: center;
+        }
+        .game-btn span { font-size: 2.5rem; }
+        .game-btn:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); z-index: 10; }
+        .game-btn:active { transform: scale(0.98); }
+        
+        .full-width { grid-column: span 2; }
+
+        /* Colors */
+        .btn-study { background: var(--study); }
+        .btn-multi { background: var(--multi); }
+        .btn-single { background: var(--single); color: black; text-shadow: none; }
+        .btn-contact { background: var(--contact); }
+        
+        /* Game Colors */
+        .btn-car { background: var(--car); }
+        .btn-fair { background: var(--fair); }
+        .btn-pacman { background: var(--pacman); }
+        .btn-flappy { background: var(--flappy); }
+        .btn-rps { background: var(--rps); }
+
+        /* --- CONTACT FORM --- */
+        .form-group { text-align: left; margin-bottom: 15px; }
+        .form-label { display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9rem; }
+        .form-input, .form-textarea {
+            width: 100%; padding: 12px; background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+            color: white; font-size: 1rem; outline: none; font-family: 'Segoe UI', sans-serif;
+        }
+        .form-textarea { height: 120px; resize: vertical; }
+        .form-input:focus, .form-textarea:focus { border-color: #00f3ff; background: rgba(0,0,0,0.5); }
+        
+        .submit-btn {
+            background: #00f3ff; color: black; border: none; padding: 12px 30px;
+            border-radius: 50px; font-weight: bold; font-size: 1.1rem;
+            cursor: pointer; width: 100%; transition: 0.3s;
+        }
+        .submit-btn:hover { background: white; }
+
+        /* --- UTILITIES --- */
+        .hidden { display: none; }
+        
+        .back-btn {
+            background: transparent; border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--text-muted); padding: 0.5rem 1.5rem; border-radius: 50px;
+            cursor: pointer; margin-bottom: 15px; display: inline-block;
+        }
+        .back-btn:hover { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
+
+        .controls { border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.5rem; }
+        .logout-btn {
+            background: transparent; border: 1px solid #ff4444; color: #ff4444;
+            padding: 0.8rem 1.5rem; border-radius: 50px; cursor: pointer; transition: 0.3s;
+        }
+        .logout-btn:hover { background: #ff4444; color: white; }
+
+        @media (max-width: 480px) {
+            .game-list-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            .leaderboard-btn-top { padding: 8px 15px; font-size: 0.9rem; top: 20px; right: 10px; }
+            .friends-btn-top { padding: 8px 15px; font-size: 0.9rem; top: 20px; left: 10px; }
+        }
+
+        @keyframes floatUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="Friends/chat.html" class="friends-btn-top">👥 Friends</a>
+    <a href="Leaderboard/leaderboard.html" class="leaderboard-btn-top">🏆 Leaderboard</a>
+
+    <div class="container">
+        <h1 id="greeting">ARCADE HUB</h1>
+        <p class="subtitle" id="menu-subtitle">Select a Category</p>
+
+        <div id="main-categories" class="menu-grid">
+            <div onclick="showSection('study')" class="game-btn btn-study"><span>📚</span> Study</div>
+            <div onclick="showSection('multi')" class="game-btn btn-multi"><span>⚔️</span> Multiplayer Games!</div>
+            <div onclick="showSection('single')" class="game-btn btn-single"><span>🕹️</span> Singleplayer Games</div>
+            <div onclick="showSection('contact')" class="game-btn btn-contact"><span>📧</span> Contact Us</div>
+        </div>
+
+        <div id="study-section" class="hidden">
+            <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
+            <div class="menu-grid">
+                <a href="Fair/Fair.html" class="game-btn btn-fair full-width"><span>📝</span> Fair Copies</a>
+            </div>
+        </div>
+
+        <div id="multi-section" class="hidden">
+            <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
+            <div class="game-list-grid">
+                <a href="Multiplayer/T.T.T Online.html" class="game-btn btn-multi full-width"><span>⚔️</span> Tic Tac Toe Online</a>
+            </div>
+        </div>
+
+        <div id="single-section" class="hidden">
+            <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
+            <div class="game-list-grid">
+                <a href="CarGame3D/Car Game 3D.html" class="game-btn btn-car full-width"><span>🏎️</span> Real City Drift</a>
+                <a href="Pac-Man/Pac Man by html.html" class="game-btn btn-pacman"><span>ᗧ</span> Pac-Man</a>
+                <a href="Falppy Bird/Flappy Bird by html.html" class="game-btn btn-flappy"><span>🐦</span> Flappy Bird</a>
+                <a href="TicTacToe/Tic-Tac-Toe.html" class="game-btn" style="background: linear-gradient(45deg, #00f3ff, #0099ff);"><span>❌⭕</span> Tic Tac Toe</a>
+                <a href="Rock files/RockPaperScissor Random.html" class="game-btn" style="background: linear-gradient(45deg, #00a2ff, #d9ff00);"><span>🎲</span> RPS (Random)</a>
+                <a href="Rock files/Rock Paper Scissors.html" class="game-btn btn-rps full-width"><span>✂️</span> Rock Paper Scissors</a>
+            </div>
+        </div>
+
+        <div id="contact-section" class="hidden">
+            <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
+            
+            <form action="https://formsubmit.co/anurag670singh@gmail.com" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Your Email</label>
+                    <input type="email" name="email" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <input type="text" name="_subject" class="form-input" placeholder="What is this about?" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Question</label>
+                    <textarea name="message" id="contactMsg" class="form-textarea" required></textarea>
+                </div>
+
+                <input type="hidden" name="_next" value="https://bittuhere.netlify.app/index.html">
+                <input type="hidden" name="_captcha" value="false">
+
+                <button type="submit" class="submit-btn">SEND MESSAGE</button>
+            </form>
+        </div>
+
+        <div class="controls">
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        // --- SECURITY CHECK ---
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'LoginPlease/login.html';
+        }
+
+        // --- PLAYER NAME ---
+        const playerName = localStorage.getItem('playerName') || "Gamer";
+        document.getElementById("greeting").innerHTML = `Hi, ${playerName}`;
+
+        // --- MENU LOGIC ---
+        const mainCats = document.getElementById('main-categories');
+        const studySec = document.getElementById('study-section');
+        const multiSec = document.getElementById('multi-section');
+        const singleSec = document.getElementById('single-section');
+        const contactSec = document.getElementById('contact-section');
+        const subtitle = document.getElementById('menu-subtitle');
+
+        function showSection(section) {
+            mainCats.classList.add('hidden');
+            
+            if (section === 'study') {
+                studySec.classList.remove('hidden');
+                subtitle.innerText = "Study Mode";
+            } else if (section === 'multi') {
+                multiSec.classList.remove('hidden');
+                subtitle.innerText = "Multiplayer Arena";
+            } else if (section === 'single') {
+                singleSec.classList.remove('hidden');
+                subtitle.innerText = "Solo Arcade";
+            } else if (section === 'contact') {
+                contactSec.classList.remove('hidden');
+                subtitle.innerText = "Contact Support";
+                
+                // Auto-fill Username
+                const msgBox = document.getElementById('contactMsg');
+                if(msgBox.value === "") {
+                    msgBox.value = `Username: ${playerName}\n------------------------\nMy Question is: `;
+                }
+            }
+        }
+
+        function goBack() {
+            studySec.classList.add('hidden');
+            multiSec.classList.add('hidden');
+            singleSec.classList.add('hidden');
+            contactSec.classList.add('hidden');
+            
+            mainCats.classList.remove('hidden');
+            subtitle.innerText = "Select a Category";
+        }
+
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            window.location.href = 'LoginPlease/login.html';
+        }
+    </script>
+
+</body>
+</html>

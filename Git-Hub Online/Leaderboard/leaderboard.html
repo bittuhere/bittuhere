@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>
+        // SECURITY CHECK
+        // If user is not logged in, kick them to login page
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = '../LoginPlease/login.html';
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Leaderboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@400;600&display=swap');
+
+        body {
+            background: #0f0c29;
+            background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            font-family: 'Teko', sans-serif;
+            font-size: 4rem;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .board-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        select {
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            background: #222;
+            color: white;
+            border: 1px solid #00f3ff;
+            border-radius: 10px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            transition: transform 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .rank-item:hover {
+            transform: scale(1.02);
+            border-color: #00f3ff;
+            background: rgba(0, 243, 255, 0.1);
+        }
+
+        .rank-num {
+            font-size: 1.5rem;
+            font-weight: bold;
+            width: 40px;
+            color: #888;
+        }
+
+        .rank-1 .rank-num {
+            color: #ffd700;
+            text-shadow: 0 0 10px #ffd700;
+        }
+
+        /* Gold */
+        .rank-2 .rank-num {
+            color: #c0c0c0;
+        }
+
+        /* Silver */
+        .rank-3 .rank-num {
+            color: #cd7f32;
+        }
+
+        /* Bronze */
+
+        .player-name {
+            flex-grow: 1;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .player-score {
+            font-size: 1.5rem;
+            color: #00f3ff;
+            font-family: 'Teko', sans-serif;
+        }
+
+        .back-btn {
+            margin-top: 20px;
+            padding: 10px 30px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: transparent;
+            color: #aaa;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .back-btn:hover {
+            border-color: white;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>LEADERBOARD</h1>
+
+    <div class="board-container">
+        <div class="game-selector">
+            <select id="gameSelect" onchange="loadLeaderboard()">
+                <option value="flappy_highscore">🐦 Flappy Bird</option>
+            </select>
+        </div>
+
+        <div id="loading" style="text-align:center; color:#888;">Loading scores...</div>
+        <div id="score-list"></div>
+    </div>
+
+    <button class="back-btn" onclick="window.location.href='../index.html'">← Back to Menu</button>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // --- YOUR FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
+            authDomain: "formywebfirebase.firebaseapp.com",
+            databaseURL: "https://formywebfirebase-default-rtdb.firebaseio.com",
+            projectId: "formywebfirebase",
+            storageBucket: "formywebfirebase.firebasestorage.app",
+            messagingSenderId: "451953941862",
+            appId: "1:451953941862:web:b5f8394f99e17b232f3ca7",
+            measurementId: "G-JD1YFCG7G3"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function loadLeaderboard() {
+            const gameKey = document.getElementById('gameSelect').value;
+            const list = document.getElementById('score-list');
+            const loading = document.getElementById('loading');
+
+            list.innerHTML = '';
+            loading.style.display = 'block';
+
+            // Fetch Top 20 High Scores
+            db.ref('users').orderByChild(gameKey).limitToLast(20).once('value').then(snapshot => {
+                loading.style.display = 'none';
+
+                let scores = [];
+                snapshot.forEach(child => {
+                    const data = child.val();
+                    if (data[gameKey]) {
+                        // We use the Key (Username) as the name
+                        // Capitalize first letter for style
+                        let name = child.key;
+                        name = name.charAt(0).toUpperCase() + name.slice(1);
+                        scores.push({ name: name, score: data[gameKey] });
+                    }
+                });
+
+                // Firebase returns ascending (low to high), so we reverse it
+                scores.reverse();
+
+                if (scores.length === 0) {
+                    list.innerHTML = '<div style="text-align:center; padding:20px;">No scores yet. Be the first!</div>';
+                    return;
+                }
+
+                // Render HTML
+                scores.forEach((player, index) => {
+                    const rank = index + 1;
+                    const div = document.createElement('div');
+                    div.className = `rank-item rank-${rank}`;
+                    div.innerHTML = `
+                        <div class="rank-num">#${rank}</div>
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-score">${player.score}</div>
+                    `;
+                    list.appendChild(div);
+                });
+            });
+        }
+
+        // Load on start
+        loadLeaderboard();
+    </script>
+</body>
+
+</html>

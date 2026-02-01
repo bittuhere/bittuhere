@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+     <script>
+        // SECURITY CHECK
+        // If user is not logged in, kick them to login.html
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = '../LoginPlease/login.html';
+        }
+            </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Tic Tac Toe</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
+
+        body {
+            background: #111;
+            color: white;
+            font-family: 'Teko', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            padding-bottom: 50px;
+            /* Space for scrolling */
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0;
+            color: #00f3ff;
+            text-shadow: 0 0 10px #00f3ff;
+        }
+
+        /* --- SIDEBAR & INVITE BTN --- */
+        .invite-toggle-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            z-index: 100;
+            text-shadow: 0 0 5px #00f3ff;
+            transition: transform 0.3s;
+        }
+
+        .invite-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .sidebar-menu {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            border-left: 2px solid #00f3ff;
+            transform: translateX(100%);
+            transition: transform 0.4s ease;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .sidebar-menu.active {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: #ff0055;
+            font-size: 2.5rem;
+            cursor: pointer;
+        }
+
+        #invite-list {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .invite-item {
+            background: #222;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #333;
+        }
+
+        .btn-send-invite {
+            background: #00f3ff;
+            color: black;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        /* --- GAME UI --- */
+        #lobby {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid #333;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 1.2rem;
+            width: 150px;
+            text-align: center;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 10px;
+        }
+
+        .main-btn {
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            font-family: 'Teko', sans-serif;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: 0.2s;
+            margin: 5px;
+        }
+
+        .btn-create {
+            background: #00f3ff;
+            color: black;
+        }
+
+        .btn-join {
+            background: #ff0055;
+            color: white;
+        }
+
+        .main-btn:hover {
+            transform: scale(1.05);
+        }
+
+        #game-area {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .status {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #aaa;
+            min-height: 30px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: #222;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            cursor: pointer;
+            color: white;
+            transition: 0.2s;
+        }
+
+        .cell.X {
+            color: #00f3ff;
+            text-shadow: 0 0 10px #00f3ff;
+        }
+
+        .cell.O {
+            color: #ff0055;
+            text-shadow: 0 0 10px #ff0055;
+        }
+
+        @keyframes winPulse {
+            0% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+                filter: brightness(1.5);
+                background: #444;
+            }
+
+            100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+        }
+
+        .cell.win-highlight {
+            animation: winPulse 0.8s ease-in-out infinite;
+            border: 2px solid white;
+        }
+
+        .room-code-display {
+            margin-top: 10px;
+            font-size: 1.2rem;
+            color: yellow;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #restartBtn {
+            display: none;
+            background: linear-gradient(45deg, #00ff88, #00b359);
+            color: black;
+            box-shadow: 0 0 15px #00ff88;
+            margin-top: 15px;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            font-family: 'Teko', sans-serif;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* --- IN-GAME CHAT --- */
+        .chat-box {
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 200px;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .chat-msg {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-family: sans-serif;
+            max-width: 80%;
+        }
+
+        .msg-me {
+            align-self: flex-end;
+            background: #00f3ff;
+            color: black;
+        }
+
+        .msg-opp {
+            align-self: flex-start;
+            background: #333;
+            color: white;
+            border: 1px solid #444;
+        }
+
+        .chat-input-area {
+            display: flex;
+            border-top: 1px solid #333;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            background: #111;
+            border: none;
+            color: white;
+            padding: 10px;
+            outline: none;
+        }
+
+        .chat-send-btn {
+            background: #00f3ff;
+            color: black;
+            border: none;
+            padding: 0 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <button class="invite-toggle-btn" onclick="toggleSidebar()">☰</button>
+    <div class="sidebar-menu" id="inviteSidebar">
+        <div class="sidebar-header">
+            <span style="font-size:1.5rem; color:#00f3ff;">INVITE FRIEND</span>
+            <button class="close-btn" onclick="toggleSidebar()">×</button>
+        </div>
+        <div id="invite-list">
+            <p style="color:#666;">Loading friends...</p>
+        </div>
+    </div>
+
+    <h1>ONLINE TIC TAC TOE</h1>
+
+    <div id="lobby">
+        <h3>Create or Join Room</h3>
+        <button class="main-btn btn-create" onclick="createRoom()">Create New Game</button>
+        <br><br>
+        <p>OR</p>
+        <input type="text" id="roomInput" placeholder="Enter Room Code">
+        <br>
+        <button class="main-btn btn-join" onclick="joinRoom()">Join Game</button>
+    </div>
+
+    <div id="game-area">
+        <div class="status" id="statusMsg">Waiting...</div>
+
+        <div class="board">
+            <div class="cell" onclick="makeMove(0)" id="c0"></div>
+            <div class="cell" onclick="makeMove(1)" id="c1"></div>
+            <div class="cell" onclick="makeMove(2)" id="c2"></div>
+            <div class="cell" onclick="makeMove(3)" id="c3"></div>
+            <div class="cell" onclick="makeMove(4)" id="c4"></div>
+            <div class="cell" onclick="makeMove(5)" id="c5"></div>
+            <div class="cell" onclick="makeMove(6)" id="c6"></div>
+            <div class="cell" onclick="makeMove(7)" id="c7"></div>
+            <div class="cell" onclick="makeMove(8)" id="c8"></div>
+        </div>
+
+        <button id="restartBtn" onclick="requestRematch()">Request Rematch</button>
+        <div class="room-code-display">Room Code: <span id="displayCode">---</span></div>
+        <button onclick="leaveGame()"
+            style="margin-top:10px; background:#444; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Leave
+            Game</button>
+
+        <div class="chat-box">
+            <div class="chat-messages" id="gameChatMsgs">
+                <div style="text-align:center; color:#555; font-size:0.8rem;">Game Chat Started</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="gameChatInput" placeholder="Type message..."
+                    onkeypress="handleChatKey(event)">
+                <button class="chat-send-btn" onclick="sendGameMessage()">→</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // --- CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
+            authDomain: "formywebfirebase.firebaseapp.com",
+            databaseURL: "https://formywebfirebase-default-rtdb.firebaseio.com",
+            projectId: "formywebfirebase",
+            storageBucket: "formywebfirebase.firebasestorage.app",
+            messagingSenderId: "451953941862",
+            appId: "1:451953941862:web:b5f8394f99e17b232f3ca7",
+            measurementId: "G-JD1YFCG7G3"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Game Vars
+        let mySymbol = '';
+        let roomId = '';
+        let isMyTurn = false;
+        let gameActive = true;
+        const myName = localStorage.getItem('playerName') || "Player";
+
+        // UI
+        const lobby = document.getElementById('lobby');
+        const gameArea = document.getElementById('game-area');
+        const statusMsg = document.getElementById('statusMsg');
+        const displayCode = document.getElementById('displayCode');
+        const restartBtn = document.getElementById('restartBtn');
+        const cells = document.querySelectorAll('.cell');
+        const sidebar = document.getElementById('inviteSidebar');
+        const inviteList = document.getElementById('invite-list');
+        const chatMsgs = document.getElementById('gameChatMsgs');
+
+        // --- SIDEBAR ---
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            if (sidebar.classList.contains('active')) loadFriendsForInvite();
+        }
+
+        function loadFriendsForInvite() {
+            if (!myName) return;
+            db.ref('friends/' + myName).once('value', snapshot => {
+                inviteList.innerHTML = "";
+                if (snapshot.exists()) {
+                    Object.keys(snapshot.val()).forEach(friendName => {
+                        const div = document.createElement('div');
+                        div.className = 'invite-item';
+                        div.innerHTML = `<span>${friendName}</span><button class="btn-send-invite" onclick="sendInvite('${friendName}')">SEND CODE</button>`;
+                        inviteList.appendChild(div);
+                    });
+                } else inviteList.innerHTML = "<p>No friends found.</p>";
+            });
+        }
+
+        function sendInvite(friendName) {
+            if (!roomId) return alert("Create a game first!");
+            const chatId = [myName, friendName].sort().join('_');
+            db.ref('chats/' + chatId).push({
+                sender: myName, text: "🎮 Join my TicTacToe game! Code: " + roomId, timestamp: Date.now()
+            });
+            alert(`Invite sent to ${friendName}!`);
+            toggleSidebar();
+        }
+
+        // --- GAME LOGIC ---
+        function createRoom() {
+            roomId = Math.floor(1000 + Math.random() * 9000).toString();
+            mySymbol = 'X';
+
+            // Setup Room with Presence
+            db.ref('games/' + roomId).set({
+                board: ["", "", "", "", "", "", "", "", ""],
+                turn: 'X', status: 'waiting', rematch: null,
+                players: { X: true } // Mark X as present
+            });
+
+            // Set Disconnect Hook (Auto-Delete if Creator leaves immediately)
+            db.ref('games/' + roomId + '/players/X').onDisconnect().remove();
+
+            enterGameUI();
+            listenToGame();
+            setTimeout(() => { if (!sidebar.classList.contains('active')) toggleSidebar(); }, 600);
+        }
+
+        function joinRoom() {
+            roomId = document.getElementById('roomInput').value;
+            if (roomId.length !== 4) return alert("Enter valid 4 digit code");
+
+            db.ref('games/' + roomId).once('value').then(snapshot => {
+                if (snapshot.exists()) {
+                    mySymbol = 'O';
+                    // Update Game Status
+                    db.ref('games/' + roomId).update({ status: 'playing' });
+                    // Mark Player O as present
+                    db.ref('games/' + roomId + '/players/O').set(true);
+                    db.ref('games/' + roomId + '/players/O').onDisconnect().remove();
+
+                    enterGameUI();
+                    listenToGame();
+                } else alert("Room not found!");
+            });
+        }
+
+        function enterGameUI() {
+            lobby.style.display = 'none';
+            gameArea.style.display = 'flex';
+            displayCode.innerText = roomId;
+            statusMsg.innerText = mySymbol === 'X' ? "Waiting..." : "Connected!";
+            chatMsgs.innerHTML = '<div style="text-align:center; color:#555; font-size:0.8rem;">Game Chat Started</div>';
+        }
+
+        function listenToGame() {
+            // Game State Listener
+            db.ref('games/' + roomId).on('value', (snapshot) => {
+                const game = snapshot.val();
+                if (!game) {
+                    // Room deleted
+                    alert("Room closed.");
+                    location.reload();
+                    return;
+                }
+
+                // Check Presence (Auto Delete Logic)
+                const players = game.players || {};
+                if (game.status === 'playing' && (!players.X || !players.O)) {
+                    // Someone left during game
+                    statusMsg.innerText = "Opponent Left!";
+                    statusMsg.style.color = "red";
+                    gameActive = false;
+                    return;
+                }
+
+                updateBoardUI(game.board);
+                restartBtn.style.display = 'none';
+
+                if (game.status === 'playing') {
+                    gameActive = true;
+                    cells.forEach(c => c.classList.remove('win-highlight'));
+                    if (game.turn === mySymbol) {
+                        statusMsg.innerText = "YOUR TURN (" + mySymbol + ")";
+                        statusMsg.style.color = "#00f3ff";
+                        isMyTurn = true;
+                    } else {
+                        statusMsg.innerText = "Opponent's Turn";
+                        statusMsg.style.color = "#aaa";
+                        isMyTurn = false;
+                    }
+                } else if (game.status === 'win') {
+                    restartBtn.style.display = 'block';
+                    if (game.winner) {
+                        const winLine = checkWin(game.board, game.winner);
+                        if (winLine) winLine.forEach(i => cells[i].classList.add('win-highlight'));
+                    }
+                    if (game.winner === mySymbol) {
+                        statusMsg.innerText = "YOU WON! 🎉"; statusMsg.style.color = "#00ff00";
+                    } else {
+                        statusMsg.innerText = "YOU LOST 💀"; statusMsg.style.color = "#ff0000";
+                    }
+                    isMyTurn = false;
+                    checkRematch(game.rematch);
+                } else if (game.status === 'draw') {
+                    restartBtn.style.display = 'block';
+                    statusMsg.innerText = "DRAW GAME"; statusMsg.style.color = "yellow";
+                    isMyTurn = false;
+                    checkRematch(game.rematch);
+                }
+            });
+
+            // Chat Listener
+            db.ref('games/' + roomId + '/chat').on('child_added', (snap) => {
+                const msg = snap.val();
+                const div = document.createElement('div');
+                div.className = 'chat-msg ' + (msg.sender === myName ? 'msg-me' : 'msg-opp');
+                div.innerText = msg.text;
+                chatMsgs.appendChild(div);
+                chatMsgs.scrollTop = chatMsgs.scrollHeight;
+            });
+        }
+
+        // --- LEAVE & CLEANUP ---
+        function leaveGame() {
+            if (roomId) {
+                // Remove my presence
+                db.ref('games/' + roomId + '/players/' + mySymbol).remove().then(() => {
+                    // Check if room is empty, then delete
+                    db.ref('games/' + roomId + '/players').once('value').then(snap => {
+                        if (!snap.exists()) {
+                            db.ref('games/' + roomId).remove(); // Delete Room
+                        }
+                    });
+                });
+            }
+            location.reload();
+        }
+
+        // --- CHAT LOGIC ---
+        function sendGameMessage() {
+            const input = document.getElementById('gameChatInput');
+            const txt = input.value.trim();
+            if (!txt || !roomId) return;
+
+            db.ref('games/' + roomId + '/chat').push({
+                sender: myName, text: txt
+            });
+            input.value = "";
+        }
+        function handleChatKey(e) { if (e.key === 'Enter') sendGameMessage(); }
+
+        // --- CORE GAME ---
+        function checkRematch(req) {
+            if (req) {
+                if (req !== mySymbol) {
+                    statusMsg.innerText = "Opponent wants Rematch!";
+                    restartBtn.innerText = "Accept Rematch";
+                } else {
+                    statusMsg.innerText = "Waiting for opponent...";
+                    restartBtn.innerText = "Request Sent...";
+                    restartBtn.disabled = true;
+                }
+            } else {
+                restartBtn.innerText = "Request Rematch"; restartBtn.disabled = false;
+            }
+        }
+        function requestRematch() {
+            db.ref('games/' + roomId).once('value').then(snap => {
+                const g = snap.val();
+                if (g.rematch && g.rematch !== mySymbol) {
+                    db.ref('games/' + roomId).update({
+                        board: ["", "", "", "", "", "", "", "", ""], turn: 'X', status: 'playing', winner: null, rematch: null
+                    });
+                } else db.ref('games/' + roomId).update({ rematch: mySymbol });
+            });
+        }
+
+        function updateBoardUI(b) {
+            cells.forEach((c, i) => {
+                c.innerText = b[i]; c.className = 'cell ' + b[i];
+                if (c.classList.contains('win-highlight')) { }
+            });
+        }
+        function makeMove(i) {
+            if (!isMyTurn || !gameActive) return;
+            if (document.getElementById('c' + i).innerText !== "") return;
+
+            db.ref('games/' + roomId).once('value').then(snap => {
+                const g = snap.val();
+                let nb = g.board; nb[i] = mySymbol;
+                let next = mySymbol === 'X' ? 'O' : 'X';
+                let stat = 'playing'; let win = null;
+
+                if (checkWin(nb, mySymbol)) { stat = 'win'; win = mySymbol; }
+                else if (!nb.includes("")) stat = 'draw';
+
+                db.ref('games/' + roomId).update({ board: nb, turn: next, status: stat, winner: win });
+            });
+        }
+        function checkWin(b, p) {
+            const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+            for (let w of wins) if (b[w[0]] === p && b[w[1]] === p && b[w[2]] === p) return w;
+            return null;
+        }
+    </script>
+</body>
+
+</html>
