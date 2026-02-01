@@ -149,7 +149,7 @@
         }
         
         .btn-rank {
-            background: #f1c40f; /* Gold for Leaderboard */
+            background: #f1c40f;
             box-shadow: 0 4px 0 #b7950b;
         }
 
@@ -251,18 +251,23 @@
             over: 2
         };
 
-        // --- LOAD IMAGES ---
+        // --- LOAD IMAGES
+        
         const birdImg = new Image();
-        birdImg.src = "Flappy bird.png";
+        birdImg.src = "Flappy bird.png"; // Ensure this matches exactly
 
         const bgImg = new Image();
-        bgImg.src = "Flappy bird background.png";
+        bgImg.src = "Flappy Bird Background.png"; // FIXED: Capitalized to match your file
 
         const pipeNorthImg = new Image();
         pipeNorthImg.src = "Flappy bird pipe (down).png";
 
         const pipeSouthImg = new Image();
         pipeSouthImg.src = "Flappy bird pipe (up).png";
+
+        // Check for loading errors
+        bgImg.onerror = function() { console.error("Error loading Background. Check filename case sensitivity!"); };
+        birdImg.onerror = function() { console.error("Error loading Bird. Check filename case sensitivity!"); };
 
         // --- CONTROLS ---
         function commandHandler(e) {
@@ -375,7 +380,7 @@
             }
         }
 
-        // --- END GAME FUNCTION (MODIFIED) ---
+        // --- END GAME FUNCTION ---
         function endGame() {
             if (gameState.current == gameState.over) return;
 
@@ -391,9 +396,8 @@
                 localStorage.setItem("flappyHighScore", highScore);
             }
 
-            // --- IMPORTANT: SAVE TO CLOUD ---
+            // --- SAVE TO CLOUD ---
             saveFlappyScoreToCloud(currentScore);
-            // --------------------------------
 
             // Show UI
             finalScoreEl.innerText = currentScore;
@@ -441,7 +445,7 @@
             if (!playerName) return;
 
             // Save to Firebase (Matches Leaderboard Logic)
-            const userRef = db.ref('users/' + playerName.toLowerCase()); // Use lowercase ID for consistency
+            const userRef = db.ref('users/' + playerName.toLowerCase()); 
 
             userRef.once('value', (snapshot) => {
                 const data = snapshot.val() || {};
@@ -449,8 +453,6 @@
 
                 if (finalScore > oldHigh) {
                     userRef.update({ flappy_highscore: finalScore });
-                    // Optional: You can alert the user if you want
-                    // alert("New Global High Score: " + finalScore);
                 }
             });
         }
