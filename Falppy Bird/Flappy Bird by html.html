@@ -255,16 +255,16 @@
         // Warning: GitHub is Case Sensitive! Files must match exactly.
         
         const birdImg = new Image();
-        birdImg.src = "Flappy bird.png"; // Ensure this matches exactly
+        birdImg.src = "fb.png"; // Ensure this matches exactly
 
         const bgImg = new Image();
-        bgImg.src = "Flappy Bird Background.png"; // FIXED: Capitalized to match your file
+        bgImg.src = "fbbg.png"; // FIXED: Capitalized to match your file
 
         const pipeNorthImg = new Image();
-        pipeNorthImg.src = "Flappy bird pipe (down).png";
+        pipeNorthImg.src = "fbpdwn.png";
 
         const pipeSouthImg = new Image();
-        pipeSouthImg.src = "Flappy bird pipe (up).png";
+        pipeSouthImg.src = "fbpup.png";
 
         // Check for loading errors
         bgImg.onerror = function() { console.error("Error loading Background. Check filename case sensitivity!"); };
