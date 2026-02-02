@@ -409,7 +409,7 @@
 
         function createTree(x, z) {
             // Trunk
-            const trunkGeo = new THREE.CylinderGeometry(1, 1, 5, 6);
+            /*const trunkGeo = new THREE.CylinderGeometry(1, 1, 5, 6);
             const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
             const trunk = new THREE.Mesh(trunkGeo, trunkMat);
             trunk.position.set(x, 2.5, z);
@@ -423,7 +423,7 @@
             leaf.position.set(x, 8, z);
             leaf.castShadow = true;
             scene.add(leaf);
-        }
+        }*/
 
         function createCar() {
             car = new THREE.Group();
@@ -623,5 +623,6 @@
         init();
     </script>
 </body>
+
 
 </html>
