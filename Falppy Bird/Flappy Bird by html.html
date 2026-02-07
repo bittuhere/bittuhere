@@ -448,24 +448,38 @@
 
         // --- CLOUD SAVE FUNCTION ---
         function saveFlappyScoreToCloud(finalScore) {
-            console.log("Saving Score to Cloud: " + finalScore);
-            const playerName = localStorage.getItem('playerName');
+    // Get Name (Check both root and subfolder storage)
+    const playerName = localStorage.getItem('playerName');
 
-            if (!playerName) return;
+    if (!playerName) {
+        console.error("Leaderboard Error: No player name found in localStorage.");
+        return;
+    }
 
-            // Save to Firebase (Matches Leaderboard Logic)
-            const userRef = db.ref('users/' + playerName.toLowerCase()); 
+    const userId = playerName.toLowerCase().trim();
+    const userRef = db.ref('users/' + userId);
+    
+    userRef.once('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const oldHigh = data.flappy_highscore || 0;
 
-            userRef.once('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                const oldHigh = data.flappy_highscore || 0;
-
-                if (finalScore > oldHigh) {
-                    userRef.update({ flappy_highscore: finalScore });
-                }
+        if (finalScore > oldHigh) {
+            userRef.update({ 
+                flappy_highscore: finalScore,
+                lastUpdated: Date.now() 
+            }).then(() => {
+                console.log("Cloud Sync: High score updated on GitHub!");
+                document.getElementById('new-record-msg').style.display = 'block';
+                document.getElementById('new-record-msg').innerText = "🏆 SYNCED TO LEADERBOARD! 🏆";
+            }).catch((error) => {
+                console.error("Firebase Sync Error:", error);
             });
         }
+    });
+}
+
     </script>
 </body>
 
 </html>
+
