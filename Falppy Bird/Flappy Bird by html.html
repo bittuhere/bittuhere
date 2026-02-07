@@ -470,7 +470,7 @@ function saveFlappyScoreToCloud(finalScore) {
                 lastUpdated: Date.now() 
             })
             .then(() => {
-                alert("✅ SUCCESS! Score " + finalScore + " synced to GitHub Leaderboard!");
+                alert("✅ SUCCESS! Score: " + finalScore + " saved to Leaderboard! Check leaderboard now!");
             })
             .catch((error) => {
                 alert("❌ FIREBASE ERROR: " + error.message);
@@ -486,5 +486,6 @@ function saveFlappyScoreToCloud(finalScore) {
 </body>
 
 </html>
+
 
 
