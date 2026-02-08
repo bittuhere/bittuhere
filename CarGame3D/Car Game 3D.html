@@ -4,7 +4,6 @@
 <head>
     <script>
         // SECURITY CHECK
-        // If user is not logged in, kick them to login.html
         if (localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = '../LoginPlease/login.html';
         }
@@ -23,7 +22,6 @@
             user-select: none;
         }
 
-        /* UI OVERLAY */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -36,7 +34,6 @@
             justify-content: space-between;
         }
 
-        /* HUD TOP */
         .hud-top {
             display: flex;
             justify-content: space-between;
@@ -59,7 +56,6 @@
             color: #ffeb3b;
         }
 
-        /* NITRO BAR */
         .nitro-container {
             width: 300px;
             height: 20px;
@@ -72,7 +68,6 @@
         }
 
         .nitro-fill {
-            width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #ff9800, #ff5722);
             width: 0%;
@@ -88,7 +83,6 @@
             z-index: 2;
         }
 
-        /* MOBILE CONTROLS */
         .mobile-controls {
             display: flex;
             justify-content: space-between;
@@ -156,7 +150,6 @@
             font-style: italic;
         }
 
-        /* MENU */
         #main-menu {
             position: absolute;
             top: 0;
@@ -259,177 +252,101 @@
     </div>
 
     <script>
-        // --- GLOBAL VARS ---
         let scene, camera, renderer;
         let car, carModel, wheels = [];
-        let particles = [], trails = [];
+        let particles = [];
 
-        // Physics State
         let speed = 0;
         let maxSpeed = 3.0;
-        let acceleration = 0;
-        let driftFactor = 0;
         let velocity = new THREE.Vector3();
         let carDir = 0;
         let nitroAmt = 100;
         let isNitro = false;
 
-        // Inputs
         let keys = { up: false, down: false, left: false, right: false, nitro: false, brake: false };
 
         function init() {
-            // Scene (Sky Blue)
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
             scene.fog = new THREE.Fog(0x87CEEB, 20, 500);
 
-            // Camera
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
             camera.position.set(0, 5, -10);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // Lights (Daylight)
-            const ambient = new THREE.AmbientLight(0xffffff, 0.6); // Bright Ambient
+            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambient);
 
             const sun = new THREE.DirectionalLight(0xffffff, 1.2);
             sun.position.set(100, 200, 50);
             sun.castShadow = true;
-            // High quality shadows for the city
-            sun.shadow.mapSize.width = 4096;
-            sun.shadow.mapSize.height = 4096;
-            sun.shadow.camera.near = 0.5;
-            sun.shadow.camera.far = 500;
-            sun.shadow.camera.left = -200;
-            sun.shadow.camera.right = 200;
-            sun.shadow.camera.top = 200;
-            sun.shadow.camera.bottom = -200;
             scene.add(sun);
 
-            // Objects
             createCity();
             createCar();
 
-            // Events
             window.addEventListener('resize', onResize);
             setupControls();
-
-            // Loop
             animate();
         }
 
         function createCity() {
-            // 1. Grass Ground
             const grassGeo = new THREE.PlaneGeometry(2000, 2000);
-            const grassMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50, roughness: 1 });
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
             const grass = new THREE.Mesh(grassGeo, grassMat);
             grass.rotation.x = -Math.PI / 2;
             grass.position.y = -0.1;
             grass.receiveShadow = true;
             scene.add(grass);
 
-            // 2. City Grid Generator
             const blockSize = 80;
             const roadWidth = 20;
-            const citySize = 10; // 10x10 blocks
+            const citySize = 10;
 
-            const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
-            const roadGeo = new THREE.PlaneGeometry(1, 1);
-            const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-
-            // Colors for buildings (White, Grey, Beige, Brick)
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
             const buildColors = [0xffffff, 0xeeeeee, 0xcccccc, 0xd2b48c, 0xa0a0a0];
 
             for (let x = -citySize / 2; x < citySize / 2; x++) {
                 for (let z = -citySize / 2; z < citySize / 2; z++) {
-
                     const centerX = x * blockSize;
                     const centerZ = z * blockSize;
 
-                    // Create Road Cross
-                    // Horizontal Road
-                    const r1 = new THREE.Mesh(roadGeo, roadMat);
-                    r1.scale.set(blockSize + roadWidth, roadWidth, 1);
+                    const r1 = new THREE.Mesh(new THREE.PlaneGeometry(blockSize + roadWidth, roadWidth), roadMat);
                     r1.rotation.x = -Math.PI / 2;
                     r1.position.set(centerX, 0.05, centerZ);
-                    r1.receiveShadow = true;
                     scene.add(r1);
 
-                    // Vertical Road
-                    const r2 = new THREE.Mesh(roadGeo, roadMat);
-                    r2.scale.set(roadWidth, blockSize, 1);
+                    const r2 = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, blockSize), roadMat);
                     r2.rotation.x = -Math.PI / 2;
-                    r2.position.set(centerX, 0.06, centerZ); // Slight offset to prevent Z-fighting
-                    r2.receiveShadow = true;
+                    r2.position.set(centerX, 0.06, centerZ);
                     scene.add(r2);
 
-                    // 4 Buildings per block (in corners)
-                    // BL
                     createBuilding(centerX - 25, centerZ - 25, buildColors);
-                    // BR
                     createBuilding(centerX + 25, centerZ - 25, buildColors);
-                    // TL
                     createBuilding(centerX - 25, centerZ + 25, buildColors);
-                    // TR
                     createBuilding(centerX + 25, centerZ + 25, buildColors);
-
-                    // Add Trees
-                    createTree(centerX - 35, centerZ);
-                    createTree(centerX + 35, centerZ);
-                    createTree(centerX, centerZ - 35);
-                    createTree(centerX, centerZ + 35);
                 }
             }
         }
 
         function createBuilding(x, z, colors) {
-            // Random Height
             const h = Math.random() * 60 + 20;
             const w = Math.random() * 15 + 20;
-
-            const col = colors[Math.floor(Math.random() * colors.length)];
-            const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 });
-
+            const mat = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)] });
             const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat);
             b.position.set(x, h / 2, z);
             b.castShadow = true;
-            b.receiveShadow = true;
             scene.add(b);
-
-            // Windows (Simple Texture approximation via stripes)
-            // Just adding a darker box slightly inside to simulate windows? 
-            // Or keep it simple low poly. Simple is better for performance.
         }
-
-        function createTree(x, z) {
-            // Trunk
-            /*const trunkGeo = new THREE.CylinderGeometry(1, 1, 5, 6);
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.set(x, 2.5, z);
-            trunk.castShadow = true;
-            scene.add(trunk);
-
-            // Leaves
-            const leafGeo = new THREE.ConeGeometry(4, 10, 8);
-            const leafMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
-            const leaf = new THREE.Mesh(leafGeo, leafMat);
-            leaf.position.set(x, 8, z);
-            leaf.castShadow = true;
-            scene.add(leaf);
-        }*/
 
         function createCar() {
             car = new THREE.Group();
             carModel = new THREE.Group();
 
-            // Metallic Red Body
             const bodyGeo = new THREE.BoxGeometry(2.2, 0.6, 4.6);
             const carPaint = new THREE.MeshStandardMaterial({ color: 0xcc0000, metalness: 0.6, roughness: 0.2 });
             const body = new THREE.Mesh(bodyGeo, carPaint);
@@ -437,51 +354,20 @@
             body.castShadow = true;
             carModel.add(body);
 
-            // Glass Cabin
-            const cabinGeo = new THREE.BoxGeometry(1.9, 0.5, 2.2);
-            const glassMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.9, roughness: 0.1 });
-            const cabin = new THREE.Mesh(cabinGeo, glassMat);
-            cabin.position.set(0, 1.1, -0.4);
-            carModel.add(cabin);
-
-            // Hood Scoop
-            const scoopGeo = new THREE.BoxGeometry(1, 0.2, 1);
-            const scoop = new THREE.Mesh(scoopGeo, carPaint);
-            scoop.position.set(0, 0.9, 1.2);
-            carModel.add(scoop);
-
-            // Headlights
-            const lightGeo = new THREE.BoxGeometry(0.4, 0.2, 0.1);
-            const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
-            const hl = new THREE.Mesh(lightGeo, lightMat); hl.position.set(0.6, 0.6, 2.3); carModel.add(hl);
-            const hr = new THREE.Mesh(lightGeo, lightMat); hr.position.set(-0.6, 0.6, 2.3); carModel.add(hr);
-
-            // Wheels (Black Rubber)
             const wGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.5, 24);
             const wMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
             wGeo.rotateZ(Math.PI / 2);
 
-            const fl = new THREE.Mesh(wGeo, wMat); fl.position.set(1.2, 0.55, -1.6);
-            const fr = new THREE.Mesh(wGeo, wMat); fr.position.set(-1.2, 0.55, -1.6);
-            const rl = new THREE.Mesh(wGeo, wMat); rl.position.set(1.2, 0.55, 1.6);
-            const rr = new THREE.Mesh(wGeo, wMat); rr.position.set(-1.2, 0.55, 1.6);
-
-            carModel.add(fl, fr, rl, rr);
-            wheels.push(fl, fr);
+            const wheelPos = [[1.2, -1.6], [-1.2, -1.6], [1.2, 1.6], [-1.2, 1.6]];
+            wheelPos.forEach((p, i) => {
+                const w = new THREE.Mesh(wGeo, wMat);
+                w.position.set(p[0], 0.55, p[1]);
+                carModel.add(w);
+                if (i < 2) wheels.push(w);
+            });
 
             car.add(carModel);
             scene.add(car);
-        }
-
-        function createExhaust(pos) {
-            const geo = new THREE.PlaneGeometry(0.5, 0.5);
-            const mat = new THREE.MeshBasicMaterial({ color: 0x888888, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-            const p = new THREE.Mesh(geo, mat);
-            p.position.copy(pos);
-            p.rotation.copy(car.rotation);
-            p.userData = { life: 20, vel: new THREE.Vector3((Math.random() - 0.5) * 0.1, (Math.random()) * 0.2, 0) };
-            scene.add(p);
-            particles.push(p);
         }
 
         function startGame() {
@@ -489,140 +375,9 @@
         }
 
         function update() {
-            // 1. Handling
             let accel = 0;
             if (keys.up) accel = 0.05;
             if (keys.down) accel = -0.03;
 
             if (keys.nitro && nitroAmt > 0) {
-                isNitro = true;
-                accel *= 2.0;
-                maxSpeed = 5.0;
-                nitroAmt -= 0.5;
-            } else {
-                isNitro = false;
-                maxSpeed = 3.0;
-                if (nitroAmt < 100) nitroAmt += 0.1;
-            }
-
-            if (keys.brake) speed *= 0.92;
-
-            speed += accel;
-            speed *= 0.98; // Friction
-
-            if (speed > maxSpeed) speed = maxSpeed;
-            if (speed < -1) speed = -1;
-
-            // Steering & Drift
-            let turn = 0;
-            if (Math.abs(speed) > 0.1) {
-                if (keys.left) turn = 0.04;
-                if (keys.right) turn = -0.04;
-            }
-
-            if (keys.brake && Math.abs(turn) > 0 && Math.abs(speed) > 1.5) {
-                driftFactor = Math.min(driftFactor + 0.05, 0.6);
-            } else {
-                driftFactor *= 0.9;
-            }
-
-            carDir += turn;
-
-            velocity.x = Math.sin(carDir + (turn * driftFactor * 5)) * speed;
-            velocity.z = Math.cos(carDir + (turn * driftFactor * 5)) * speed;
-
-            car.position.add(velocity);
-
-            car.rotation.y = carDir + (turn * driftFactor * 10);
-            carModel.rotation.z = -turn * 4;
-            carModel.rotation.x = -accel * 2;
-
-            wheels[0].rotation.y = turn * 10;
-            wheels[1].rotation.y = turn * 10;
-            wheels.forEach(w => w.rotation.x += speed);
-
-            // 2. Camera Chase
-            const idealOffset = new THREE.Vector3(0, 6 + (Math.abs(speed)), -12 - (Math.abs(speed) * 2));
-            idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), carDir);
-            idealOffset.add(car.position);
-
-            camera.position.lerp(idealOffset, 0.1);
-            camera.lookAt(car.position);
-
-            // 3. Effects
-            if (isNitro && Math.abs(speed) > 1) {
-                const pos = new THREE.Vector3(0, 0.5, -2.5);
-                pos.applyMatrix4(car.matrixWorld);
-                createExhaust(pos);
-            }
-
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.userData.life--;
-                p.position.y += p.userData.vel.y;
-                p.scale.multiplyScalar(1.05);
-                p.material.opacity *= 0.9;
-                if (p.userData.life <= 0) {
-                    scene.remove(p);
-                    particles.splice(i, 1);
-                }
-            }
-
-            // 4. UI Update
-            document.getElementById('speed-display').innerText = Math.floor(Math.abs(speed) * 80);
-            document.getElementById('nitro-bar').style.width = nitroAmt + "%";
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            update();
-            renderer.render(scene, camera);
-        }
-
-        function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        function setupControls() {
-            // Keyboard
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
-                if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
-                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
-                if (e.key === 'Shift') keys.nitro = true;
-                if (e.code === 'Space') keys.brake = true;
-            });
-            document.addEventListener('keyup', (e) => {
-                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
-                if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
-                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
-                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
-                if (e.key === 'Shift') keys.nitro = false;
-                if (e.code === 'Space') keys.brake = false;
-            });
-
-            // Touch
-            const bindBtn = (id, key) => {
-                const el = document.getElementById(id);
-                el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
-                el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
-                el.addEventListener('mousedown', () => { keys[key] = true; });
-                el.addEventListener('mouseup', () => { keys[key] = false; });
-            };
-
-            bindBtn('btn-gas', 'up');
-            bindBtn('btn-brake', 'down');
-            bindBtn('btn-left', 'left');
-            bindBtn('btn-right', 'right');
-            bindBtn('btn-nitro', 'nitro');
-        }
-
-        init();
-    </script>
-</body>
-
-
-</html>
+                isNitro =
