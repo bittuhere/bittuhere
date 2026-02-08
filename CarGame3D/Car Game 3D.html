@@ -380,4 +380,91 @@
             if (keys.down) accel = -0.03;
 
             if (keys.nitro && nitroAmt > 0) {
-                isNitro =
+                isNitro = true;
+                accel *= 2.0;
+                maxSpeed = 5.0;
+                nitroAmt -= 0.5;
+            } else {
+                isNitro = false;
+                maxSpeed = 3.0;
+                if (nitroAmt < 100) nitroAmt += 0.1;
+            }
+
+            if (keys.brake) speed *= 0.92;
+            speed += accel;
+            speed *= 0.98;
+
+            if (speed > maxSpeed) speed = maxSpeed;
+            if (speed < -1) speed = -1;
+
+            let turn = 0;
+            if (Math.abs(speed) > 0.1) {
+                if (keys.left) turn = 0.04;
+                if (keys.right) turn = -0.04;
+            }
+
+            carDir += turn;
+            velocity.x = Math.sin(carDir) * speed;
+            velocity.z = Math.cos(carDir) * speed;
+            car.position.add(velocity);
+            car.rotation.y = carDir;
+
+            wheels.forEach(w => w.rotation.y = turn * 10);
+
+            const idealOffset = new THREE.Vector3(0, 6 + Math.abs(speed), -12 - Math.abs(speed) * 2);
+            idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), carDir);
+            idealOffset.add(car.position);
+            camera.position.lerp(idealOffset, 0.1);
+            camera.lookAt(car.position);
+
+            document.getElementById('speed-display').innerText = Math.floor(Math.abs(speed) * 80);
+            document.getElementById('nitro-bar').style.width = nitroAmt + "%";
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            update();
+            renderer.render(scene, camera);
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function setupControls() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+                if (e.key === 'Shift') keys.nitro = true;
+                if (e.code === 'Space') keys.brake = true;
+            });
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+                if (e.key === 'Shift') keys.nitro = false;
+                if (e.code === 'Space') keys.brake = false;
+            });
+
+            const bindBtn = (id, key) => {
+                const el = document.getElementById(id);
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+                el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+            };
+
+            bindBtn('btn-gas', 'up');
+            bindBtn('btn-brake', 'down');
+            bindBtn('btn-left', 'left');
+            bindBtn('btn-right', 'right');
+            bindBtn('btn-nitro', 'nitro');
+        }
+
+        init();
+    </script>
+</body>
+</html>
