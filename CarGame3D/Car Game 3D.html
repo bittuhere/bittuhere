@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <script>
         // SECURITY CHECK
@@ -9,213 +10,527 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Car City Drift - Fixed</title>
+    <title>Car City Drift</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Teko', sans-serif; user-select: none; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
-        .hud-top { display: flex; justify-content: space-between; padding: 20px; text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5); }
-        .speed-val { font-size: 4rem; color: #fff; line-height: 0.8; }
-        .nitro-container { width: 250px; height: 15px; background: rgba(0, 0, 0, 0.5); border: 2px solid #fff; transform: skewX(-20deg); margin-top: 10px; overflow: hidden; }
-        .nitro-fill { height: 100%; background: linear-gradient(90deg, #ff9800, #ff5722); width: 0%; transition: width 0.1s; }
-        .mobile-controls { display: flex; justify-content: space-between; padding: 20px 40px; pointer-events: auto; padding-bottom: 40px; }
-        .btn-round { width: 70px; height: 70px; border-radius: 50%; background: rgba(0, 0, 0, 0.3); border: 2px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 5px; }
-        .pedal { width: 60px; height: 100px; border-radius: 10px; background: rgba(0,0,0,0.3); border: 2px solid #fff; color: white; display: flex; align-items: center; justify-content: center; margin-left: 10px; }
-        #main-menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(5px); }
-        h1 { font-size: 6rem; color: white; font-style: italic; margin: 0; }
-        .start-btn { padding: 15px 50px; font-size: 2rem; background: #e74c3c; border: 2px solid #fff; color: white; cursor: pointer; font-family: 'Teko'; }
-        .back-link { position: absolute; top: 20px; left: 20px; color: #fff; text-decoration: none; border: 1px solid #fff; padding: 5px 15px; pointer-events: auto; background: rgba(0,0,0,0.3); z-index: 110; }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #87CEEB;
+            font-family: 'Teko', sans-serif;
+            user-select: none;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+        }
+
+        .speedo-box {
+            text-align: right;
+        }
+
+        .speed-val {
+            font-size: 4rem;
+            color: #fff;
+            line-height: 0.8;
+        }
+
+        .speed-label {
+            font-size: 1.5rem;
+            color: #ffeb3b;
+        }
+
+        .nitro-container {
+            width: 300px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+            transform: skewX(-20deg);
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nitro-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff9800, #ff5722);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .nitro-text {
+            position: absolute;
+            top: 0;
+            left: 10px;
+            font-size: 1rem;
+            color: white;
+            z-index: 2;
+        }
+
+        .mobile-controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 40px;
+            pointer-events: auto;
+            align-items: flex-end;
+            padding-bottom: 40px;
+        }
+
+        .btn-round {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            margin: 0 10px;
+            transition: 0.1s;
+        }
+
+        .btn-round:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+
+        .pedal {
+            width: 70px;
+            height: 120px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .pedal:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .gas {
+            background: rgba(46, 204, 113, 0.5);
+        }
+
+        .brake {
+            background: rgba(231, 76, 60, 0.5);
+            height: 90px;
+        }
+
+        .nitro-btn {
+            background: rgba(255, 152, 0, 0.5);
+            border-color: #ff9800;
+            color: white;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        #main-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 50;
+            backdrop-filter: blur(5px);
+        }
+
+        h1 {
+            font-size: 7rem;
+            margin: 0;
+            color: white;
+            text-transform: uppercase;
+            font-style: italic;
+            letter-spacing: -2px;
+            text-shadow: 4px 4px 0 #333;
+        }
+
+        button.start-btn {
+            padding: 15px 60px;
+            font-size: 2.5rem;
+            font-family: 'Teko', sans-serif;
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            border: none;
+            color: white;
+            cursor: pointer;
+            transform: skew(-10deg);
+            transition: 0.2s;
+            margin-top: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid white;
+        }
+
+        button.start-btn:hover {
+            transform: skew(-10deg) scale(1.1);
+            background: #ff5733;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #333;
+            text-decoration: none;
+            font-size: 1.2rem;
+            border: 1px solid #333;
+            padding: 5px 15px;
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.5);
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
+
 <body>
+
     <div id="game-container"></div>
+
     <div id="ui-layer">
-        <a href="../index.html" class="back-link">← Menu</a>
+        <a href="../index.html" class="back-link">← Arcade Menu</a>
+
         <div class="hud-top">
             <div style="flex-grow:1"></div>
-            <div style="text-align:right">
+            <div class="speedo-box">
                 <div class="speed-val" id="speed-display">0</div>
-                <div style="color:yellow">KM/H</div>
-                <div class="nitro-container"><div class="nitro-fill" id="nitro-bar"></div></div>
+                <div class="speed-label">KM/H</div>
+                <div class="nitro-container">
+                    <div class="nitro-text">NITRO</div>
+                    <div class="nitro-fill" id="nitro-bar"></div>
+                </div>
             </div>
         </div>
+
         <div class="mobile-controls">
-            <div style="display:flex;"><div class="btn-round" id="btn-left">◀</div><div class="btn-round" id="btn-right">▶</div></div>
-            <div style="display:flex;"><div class="btn-round" id="btn-nitro" style="background:orange">N</div><div class="pedal" id="btn-brake" style="background:red">BRK</div><div class="pedal" id="btn-gas" style="background:green">GAS</div></div>
+            <div style="display:flex;">
+                <div class="btn-round" id="btn-left">◀</div>
+                <div class="btn-round" id="btn-right">▶</div>
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+                <div class="btn-round nitro-btn" id="btn-nitro">N</div>
+                <div class="pedal brake" id="btn-brake">brake</div>
+                <div class="pedal gas" id="btn-gas">GAS</div>
+            </div>
         </div>
     </div>
+
     <div id="main-menu">
         <h1>REAL CITY</h1>
+        <p style="color:#eee; font-size:1.5rem; letter-spacing:2px;">OPEN WORLD DRIFT</p>
         <button class="start-btn" onclick="startGame()">DRIVE</button>
+        <p style="color:#ccc; font-size:1rem; margin-top:20px;">PC: Arrows + Shift | Mobile: On-Screen Controls</p>
     </div>
 
     <script>
-        let scene, camera, renderer, car, carModel;
-        let wheels = [], buildings = [], particles = [];
-        let speed = 0, maxSpeed = 3.0, carDir = 0, nitroAmt = 100, isNitro = false;
+        let scene, camera, renderer;
+        let car, carModel, wheels = [];
+        let buildings = []; // Store buildings for collision detection
+
+        let speed = 0;
+        let maxSpeed = 3.0;
+        let velocity = new THREE.Vector3();
+        let carDir = 0;
+        let nitroAmt = 100;
+        let isNitro = false;
+
         let keys = { up: false, down: false, left: false, right: false, nitro: false, brake: false };
-        let exhaustGeo, exhaustMat; // Will be initialized in init()
 
         function init() {
-            // Initialize Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 50, 600);
-            
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1500);
-            
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 500);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 5, -10);
+
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // Assets (Now safe to create after THREE is loaded)
-            exhaustGeo = new THREE.PlaneGeometry(0.4, 0.4);
-            exhaustMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
+            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambient);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-            sun.position.set(50, 100, 50);
+            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+            sun.position.set(100, 200, 50);
             sun.castShadow = true;
             scene.add(sun);
 
             createCity();
             createCar();
+
+            window.addEventListener('resize', onResize);
             setupControls();
             animate();
         }
 
         function createCity() {
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: 0x4CAF50 }));
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
+            const grassGeo = new THREE.PlaneGeometry(2000, 2000);
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
+            const grass = new THREE.Mesh(grassGeo, grassMat);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.y = -0.1;
+            grass.receiveShadow = true;
+            scene.add(grass);
 
-            const blockSize = 80, roadWidth = 22, citySize = 8;
-            const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-            const winMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const blockSize = 80;
+            const roadWidth = 20;
+            const citySize = 10;
 
-            for (let x = -citySize/2; x < citySize/2; x++) {
-                for (let z = -citySize/2; z < citySize/2; z++) {
-                    const cx = x * blockSize, cz = z * blockSize;
-                    const r1 = new THREE.Mesh(new THREE.PlaneGeometry(blockSize+roadWidth, roadWidth), roadMat);
-                    r1.rotation.x = -Math.PI/2; r1.position.set(cx, 0.05, cz); scene.add(r1);
-                    
-                    [[cx-25, cz-25], [cx+25, cz-25], [cx-25, cz+25], [cx+25, cz+25]].forEach(pos => {
-                        const h = 30 + Math.random() * 40, w = 20;
-                        const bGroup = new THREE.Group();
-                        const bMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), new THREE.MeshStandardMaterial({ color: 0xcccccc }));
-                        bMesh.position.y = h/2; bMesh.castShadow = true; bGroup.add(bMesh);
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const buildColors = [0xffffff, 0xeeeeee, 0xcccccc, 0xd2b48c, 0xa0a0a0];
 
-                        // Windows
-                        for(let f=5; f<h-5; f+=10) {
-                            const win = new THREE.Mesh(new THREE.BoxGeometry(w+0.2, 2, w+0.2), winMat);
-                            win.position.y = f; bGroup.add(win);
-                        }
-                        bGroup.position.set(pos[0], 0, pos[1]);
-                        scene.add(bGroup);
-                        buildings.push(new THREE.Box3().setFromObject(bMesh));
-                    });
+            for (let x = -citySize / 2; x < citySize / 2; x++) {
+                for (let z = -citySize / 2; z < citySize / 2; z++) {
+                    const centerX = x * blockSize;
+                    const centerZ = z * blockSize;
+
+                    const r1 = new THREE.Mesh(new THREE.PlaneGeometry(blockSize + roadWidth, roadWidth), roadMat);
+                    r1.rotation.x = -Math.PI / 2;
+                    r1.position.set(centerX, 0.05, centerZ);
+                    scene.add(r1);
+
+                    const r2 = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, blockSize), roadMat);
+                    r2.rotation.x = -Math.PI / 2;
+                    r2.position.set(centerX, 0.06, centerZ);
+                    scene.add(r2);
+
+                    createBuilding(centerX - 25, centerZ - 25, buildColors);
+                    createBuilding(centerX + 25, centerZ - 25, buildColors);
+                    createBuilding(centerX - 25, centerZ + 25, buildColors);
+                    createBuilding(centerX + 25, centerZ + 25, buildColors);
                 }
             }
         }
 
-        function createCar() {
-            car = new THREE.Group(); carModel = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 4.5), new THREE.MeshStandardMaterial({ color: 0xcc0000, metalness: 0.5 }));
-            body.position.y = 0.7; body.castShadow = true; carModel.add(body);
+        function createBuilding(x, z, colors) {
+            const h = Math.random() * 60 + 20;
+            const w = Math.random() * 15 + 20;
+            const col = colors[Math.floor(Math.random() * colors.length)];
             
-            const wGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16); wGeo.rotateZ(Math.PI/2);
-            const wMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            [[1.1, -1.5], [-1.1, -1.5], [1.1, 1.5], [-1.1, 1.5]].forEach((p, i) => {
-                const w = new THREE.Mesh(wGeo, wMat); w.position.set(p[0], 0.5, p[1]);
-                carModel.add(w); if(i<2) wheels.push(w);
-            });
-            car.add(carModel); scene.add(car);
+            const group = new THREE.Group();
+            
+            // Main Building Structure
+            const mat = new THREE.MeshStandardMaterial({ color: col });
+            const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat);
+            b.position.set(0, h / 2, 0);
+            b.castShadow = true;
+            b.receiveShadow = true;
+            group.add(b);
+
+            // Add Black Windows
+            const winMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            const winGeo = new THREE.PlaneGeometry(1.5, 2);
+            
+            for (let floor = 2; floor < h - 4; floor += 6) {
+                for (let pos = -w / 2 + 3; pos < w / 2 - 3; pos += 4) {
+                    // Front Face
+                    const w1 = new THREE.Mesh(winGeo, winMat);
+                    w1.position.set(pos, floor, w / 2 + 0.1);
+                    group.add(w1);
+                    // Back Face
+                    const w2 = new THREE.Mesh(winGeo, winMat);
+                    w2.position.set(pos, floor, -w / 2 - 0.1);
+                    w2.rotation.y = Math.PI;
+                    group.add(w2);
+                    // Left Face
+                    const w3 = new THREE.Mesh(winGeo, winMat);
+                    w3.position.set(-w / 2 - 0.1, floor, pos);
+                    w3.rotation.y = -Math.PI / 2;
+                    group.add(w3);
+                    // Right Face
+                    const w4 = new THREE.Mesh(winGeo, winMat);
+                    w4.position.set(w / 2 + 0.1, floor, pos);
+                    w4.rotation.y = Math.PI / 2;
+                    group.add(w4);
+                }
+            }
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+            
+            // Store Bounding Box for Collision
+            const box = new THREE.Box3().setFromObject(b);
+            // We need to shift the box since 'b' is inside 'group'
+            box.translate(new THREE.Vector3(x, 0, z));
+            buildings.push(box);
         }
 
-        function createExhaust(pos) {
-            if (!exhaustMat) return;
-            const p = new THREE.Mesh(exhaustGeo, exhaustMat.clone());
-            p.position.copy(pos); p.rotation.copy(car.rotation);
-            p.userData = { life: 15 }; scene.add(p); particles.push(p);
+        function createCar() {
+            car = new THREE.Group();
+            carModel = new THREE.Group();
+
+            const bodyGeo = new THREE.BoxGeometry(2.2, 0.6, 4.6);
+            const carPaint = new THREE.MeshStandardMaterial({ color: 0xcc0000, metalness: 0.6, roughness: 0.2 });
+            const body = new THREE.Mesh(bodyGeo, carPaint);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            carModel.add(body);
+
+            const wGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.5, 24);
+            const wMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            wGeo.rotateZ(Math.PI / 2);
+
+            const wheelPos = [[1.2, -1.6], [-1.2, -1.6], [1.2, 1.6], [-1.2, 1.6]];
+            wheelPos.forEach((p, i) => {
+                const w = new THREE.Mesh(wGeo, wMat);
+                w.position.set(p[0], 0.55, p[1]);
+                carModel.add(w);
+                if (i < 2) wheels.push(w);
+            });
+
+            car.add(carModel);
+            scene.add(car);
+        }
+
+        function startGame() {
+            document.getElementById('main-menu').style.display = 'none';
         }
 
         function update() {
-            let accel = keys.up ? 0.06 : (keys.down ? -0.04 : 0);
-            if (keys.nitro && nitroAmt > 0) { accel *= 2.2; maxSpeed = 5.5; nitroAmt -= 0.8; isNitro = true; }
-            else { maxSpeed = 3.0; nitroAmt = Math.min(100, nitroAmt+0.2); isNitro = false; }
+            let accel = 0;
+            if (keys.up) accel = 0.05;
+            if (keys.down) accel = -0.03;
 
-            speed = (speed + accel) * 0.98;
-            speed = Math.max(-1, Math.min(maxSpeed, speed));
-
-            if (Math.abs(speed) > 0.1) {
-                const turn = keys.left ? 0.04 : (keys.right ? -0.04 : 0);
-                carDir += turn;
-                wheels.forEach(w => w.rotation.y = turn * 10);
+            if (keys.nitro && nitroAmt > 0) {
+                isNitro = true;
+                accel *= 2.0;
+                maxSpeed = 5.0;
+                nitroAmt -= 0.5;
+            } else {
+                isNitro = false;
+                maxSpeed = 3.0;
+                if (nitroAmt < 100) nitroAmt += 0.1;
             }
 
+            if (keys.brake) speed *= 0.92;
+            speed += accel;
+            speed *= 0.98;
+
+            if (speed > maxSpeed) speed = maxSpeed;
+            if (speed < -1) speed = -1;
+
+            let turn = 0;
+            if (Math.abs(speed) > 0.1) {
+                if (keys.left) turn = 0.04;
+                if (keys.right) turn = -0.04;
+            }
+
+            carDir += turn;
+            
+            // --- COLLISION DETECTION ---
             const nextX = car.position.x + Math.sin(carDir) * speed;
             const nextZ = car.position.z + Math.cos(carDir) * speed;
-            const carBox = new THREE.Box3(new THREE.Vector3(nextX-1, 0, nextZ-2), new THREE.Vector3(nextX+1, 2, nextZ+2));
+            
+            // Create a small bounding box for the car at its NEXT position
+            const carBox = new THREE.Box3(
+                new THREE.Vector3(nextX - 1.1, 0, nextZ - 2.3),
+                new THREE.Vector3(nextX + 1.1, 2, nextZ + 2.3)
+            );
 
             let collision = false;
-            for (let b of buildings) {
-                if (Math.abs(b.min.x - nextX) < 30 && carBox.intersectsBox(b)) { collision = true; break; }
+            for (let bBox of buildings) {
+                if (carBox.intersectsBox(bBox)) {
+                    collision = true;
+                    break;
+                }
             }
 
-            if (!collision) { car.position.set(nextX, 0, nextZ); } else { speed = -speed * 0.5; }
+            if (!collision) {
+                velocity.x = Math.sin(carDir) * speed;
+                velocity.z = Math.cos(carDir) * speed;
+                car.position.add(velocity);
+            } else {
+                speed = 0; // Stop car on hit
+            }
+            
             car.rotation.y = carDir;
+            wheels.forEach(w => w.rotation.y = turn * 10);
 
-            camera.position.lerp(new THREE.Vector3(car.position.x - Math.sin(carDir)*12, 6+speed, car.position.z - Math.cos(carDir)*12), 0.1);
+            const idealOffset = new THREE.Vector3(0, 6 + Math.abs(speed), -12 - Math.abs(speed) * 2);
+            idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), carDir);
+            idealOffset.add(car.position);
+            camera.position.lerp(idealOffset, 0.1);
             camera.lookAt(car.position);
 
-            if (isNitro && Math.abs(speed) > 1 && Math.random() > 0.5) {
-                const pPos = new THREE.Vector3(0, 0.5, -2.2).applyMatrix4(car.matrixWorld);
-                createExhaust(pPos);
-            }
-            particles.forEach((p, i) => { 
-                p.userData.life--; p.material.opacity *= 0.9; 
-                if(p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
-            });
-
-            document.getElementById('speed-display').innerText = Math.floor(Math.abs(speed) * 85);
+            document.getElementById('speed-display').innerText = Math.floor(Math.abs(speed) * 80);
             document.getElementById('nitro-bar').style.width = nitroAmt + "%";
         }
 
-        function animate() { requestAnimationFrame(animate); update(); renderer.render(scene, camera); }
-        
-        function startGame() { 
-            document.getElementById('main-menu').style.display = 'none'; 
-            init(); 
+        function animate() {
+            requestAnimationFrame(animate);
+            update();
+            renderer.render(scene, camera);
         }
 
-        function onResize() { 
-            if (!camera) return;
-            camera.aspect = window.innerWidth/window.innerHeight; 
-            camera.updateProjectionMatrix(); 
-            renderer.setSize(window.innerWidth, window.innerHeight); 
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         function setupControls() {
-            const handle = (e, val) => {
-                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = val;
-                if (e.key === 'ArrowDown' || e.key === 's') keys.down = val;
-                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = val;
-                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = val;
-                if (e.key === 'Shift') keys.nitro = val;
-            };
-            document.addEventListener('keydown', e => handle(e, true));
-            document.addEventListener('keyup', e => handle(e, false));
-            const bind = (id, k) => {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+                if (e.key === 'Shift') keys.nitro = true;
+                if (e.code === 'Space') keys.brake = true;
+            });
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+                if (e.key === 'Shift') keys.nitro = false;
+                if (e.code === 'Space') keys.brake = false;
+            });
+
+            const bindBtn = (id, key) => {
                 const el = document.getElementById(id);
-                el.onmousedown = el.ontouchstart = (e) => { e.preventDefault(); keys[k] = true; };
-                el.onmouseup = el.ontouchend = (e) => { e.preventDefault(); keys[k] = false; };
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+                el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
             };
-            bind('btn-gas', 'up'); bind('btn-brake', 'down'); bind('btn-left', 'left'); bind('btn-right', 'right'); bind('btn-nitro', 'nitro');
-            window.addEventListener('resize', onResize);
+
+            bindBtn('btn-gas', 'up');
+            bindBtn('btn-brake', 'down');
+            bindBtn('btn-left', 'left');
+            bindBtn('btn-right', 'right');
+            bindBtn('btn-nitro', 'nitro');
         }
+
+        init();
     </script>
 </body>
 </html>
