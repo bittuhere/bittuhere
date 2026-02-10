@@ -25,18 +25,20 @@
             justify-content: center; cursor: pointer; border-radius: 5px 0 0 5px; font-size: 1.5rem;
         }
 
-        /* --- INVITE SIDEBAR STYLE (From T.T.T Online) --- */
+        /* --- INVITE SIDEBAR STYLE (Fixed z-index) --- */
         .invite-toggle-btn {
             position: absolute; top: 20px; right: 20px; background: transparent;
-            border: none; color: white; font-size: 2.5rem; cursor: pointer;
-            z-index: 100; text-shadow: 0 0 5px #2ecc71; transition: transform 0.3s;
+            border: none; color: #2ecc71; font-size: 2.5rem; cursor: pointer;
+            z-index: 1100; /* Higher than Lobby (1000) */
+            text-shadow: 0 0 5px white; transition: transform 0.3s;
             pointer-events: auto;
         }
         .sidebar-menu {
             position: fixed; top: 0; right: 0; width: 280px; height: 100%;
             background: rgba(10, 10, 10, 0.95); border-left: 2px solid #2ecc71;
             transform: translateX(100%); transition: transform 0.4s ease;
-            z-index: 600; display: flex; flex-direction: column; padding: 20px;
+            z-index: 1200; /* Higher than Lobby */
+            display: flex; flex-direction: column; padding: 20px;
             pointer-events: auto;
         }
         .sidebar-menu.active { transform: translateX(0); }
@@ -46,7 +48,6 @@
         }
         .close-btn { background: transparent; border: none; color: #ff0055; font-size: 2.5rem; cursor: pointer; }
         #invite-list { overflow-y: auto; flex-grow: 1; }
-        /* ------------------------------------------------ */
 
         #chat-sidebar {
             position: absolute; top: 20px; left: 20px; width: clamp(200px, 60vw, 300px);
@@ -186,7 +187,6 @@
             animate();
         }
 
-        // KEEPING YOUR CUSTOM MAP DESIGN
         function createMap() {
             const ground = new THREE.Mesh(
                 new THREE.PlaneGeometry(3000,3000),
@@ -263,7 +263,6 @@
             return car;
         }
 
-        // --- SIDEBAR & INVITE LOGIC (From T.T.T Online) ---
         function toggleInviteSidebar() {
             const sidebar = document.getElementById('inviteSidebar');
             sidebar.classList.toggle('active');
