@@ -152,36 +152,140 @@
             animate();
         }
 
-        function createMap() {
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000,2000), new THREE.MeshStandardMaterial({color:0x7db15d}));
-            ground.rotation.x = -Math.PI/2; scene.add(ground);
-            
-            for(let i=0; i<40; i++) {
-                const h = 20 + Math.random()*40;
-                const b = new THREE.Mesh(new THREE.BoxGeometry(20,h,20), new THREE.MeshStandardMaterial({color:0xeeeeee}));
-                const x = (Math.random()-0.5)*800, z = (Math.random()-0.5)*800;
-                if(Math.abs(x)<40 && Math.abs(z)<40) continue;
-                b.position.set(x, h/2, z); scene.add(b);
-                buildings.push(new THREE.Box3().setFromObject(b));
-            }
+function createMap() {
+    // 🌱 GROUND
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(3000,3000),
+        new THREE.MeshStandardMaterial({ color: 0x4caf50 })
+    );
+    ground.rotation.x = -Math.PI/2;
+    scene.add(ground);
+
+    // 🛣 ROADS (GRID – NO BLINK)
+    const roadMat = new THREE.MeshStandardMaterial({
+        color: 0x222222,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -4
+    });
+
+    for(let i = -1500; i <= 1500; i += 120) {
+        const r1 = new THREE.Mesh(
+            new THREE.PlaneGeometry(3000, 26),
+            roadMat
+        );
+        r1.rotation.x = -Math.PI/2;
+        r1.position.set(0, 0.02, i);
+        scene.add(r1);
+
+        const r2 = new THREE.Mesh(
+            new THREE.PlaneGeometry(26, 3000),
+            roadMat
+        );
+        r2.rotation.x = -Math.PI/2;
+        r2.position.set(i, 0.02, 0);
+        scene.add(r2);
+    }
+
+    // 🏙 BUILDINGS (CITY BLOCK STYLE)
+    buildings.length = 0;
+    for(let x = -10; x <= 10; x++) {
+        for(let z = -10; z <= 10; z++) {
+            if (x % 2 === 0 || z % 2 === 0) continue;
+
+            const h = 30 + Math.random() * 70;
+            const b = new THREE.Mesh(
+                new THREE.BoxGeometry(28, h, 28),
+                new THREE.MeshStandardMaterial({
+                    color: new THREE.Color().setHSL(0, 0, 0.75 + Math.random()*0.1)
+                })
+            );
+
+            b.position.set(x * 120, h / 2, z * 120);
+            scene.add(b);
+            buildings.push(new THREE.Box3().setFromObject(b));
         }
+    }
+}
+
 
         function createVehicle(color, name) {
-            const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 4.5), new THREE.MeshStandardMaterial({color: color}));
-            body.position.y = 0.5; group.add(body);
+    const car = new THREE.Group();
 
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 256; canvas.height = 64;
-            ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(0,0,256,64);
-            ctx.font = 'bold 36px Teko'; ctx.fillStyle = '#333'; ctx.textAlign = 'center';
-            ctx.fillText(name, 128, 45);
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(canvas)}));
-            sprite.position.y = 4; sprite.scale.set(4, 1, 1);
-            group.add(sprite);
-            return group;
-        }
+    // 🚗 BODY
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(2.6, 0.8, 4.8),
+        new THREE.MeshStandardMaterial({
+            color: color,
+            metalness: 0.6,
+            roughness: 0.35
+        })
+    );
+    body.position.y = 0.6;
+    car.add(body);
+
+    // 🚙 CABIN
+    const cabin = new THREE.Mesh(
+        new THREE.BoxGeometry(2.2, 0.7, 2.4),
+        new THREE.MeshStandardMaterial({
+            color: 0x111111,
+            roughness: 0.4
+        })
+    );
+    cabin.position.set(0, 1.1, -0.4);
+    car.add(cabin);
+
+    // 🛞 WHEELS
+    const wheelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 16);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+
+    const wheels = [
+        [ 1.2, 0.4,  1.7],
+        [-1.2, 0.4,  1.7],
+        [ 1.2, 0.4, -1.7],
+        [-1.2, 0.4, -1.7],
+    ];
+
+    wheels.forEach(p => {
+        const w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.position.set(p[0], p[1], p[2]);
+        car.add(w);
+    });
+
+    // 🔴 BRAKE LIGHTS (visual only)
+    const brakeMat = new THREE.MeshBasicMaterial({ color: 0x330000 });
+    [-0.7, 0.7].forEach(x => {
+        const light = new THREE.Mesh(
+            new THREE.BoxGeometry(0.4, 0.2, 0.1),
+            brakeMat
+        );
+        light.position.set(x, 0.7, -2.45);
+        car.add(light);
+    });
+
+    // 🏷 NAME TAG (your existing feature, improved)
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 256; 
+    canvas.height = 64;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillRect(0,0,256,64);
+    ctx.font = 'bold 36px Teko';
+    ctx.fillStyle = '#222';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, 128, 44);
+
+    const label = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) })
+    );
+    label.position.y = 3.2;
+    label.scale.set(4, 1, 1);
+    car.add(label);
+
+    return car;
+}
+
 
         // --- MULTI-TOUCH CONTROLS ---
         function setupControls() {
