@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>City Drift Online</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Teko', sans-serif; color: white; }
+        
+        /* SIDEBAR: ROOM CODE (Tic-Tac-Toe style) */
+        #code-sidebar {
+            position: absolute; top: 100px; right: -250px; width: 220px;
+            background: rgba(0,0,0,0.8); border: 2px solid #00f3ff;
+            padding: 15px; border-radius: 10px 0 0 10px; transition: 0.5s;
+            pointer-events: auto; z-index: 500;
+        }
+        #code-sidebar.open { right: 0; }
+        .side-btn { 
+            position: absolute; left: -40px; top: 0; width: 40px; height: 50px;
+            background: #00f3ff; color: black; display: flex; align-items: center;
+            justify-content: center; cursor: pointer; border-radius: 5px 0 0 5px;
+        }
+
+        /* SIDEBAR: CHAT (Roblox style) */
+        #chat-sidebar {
+            position: absolute; top: 20px; left: 20px; width: 300px;
+            height: 200px; background: rgba(0,0,0,0.3); border-radius: 5px;
+            display: flex; flex-direction: column; pointer-events: auto; z-index: 500;
+        }
+        #chat-messages { flex: 1; overflow-y: auto; padding: 5px; font-size: 1.1rem; }
+        #chat-input { 
+            background: rgba(255,255,255,0.1); border: none; padding: 8px;
+            color: white; font-family: 'Teko'; font-size: 1.2rem; outline: none;
+        }
+
+        /* LOBBY UI */
+        #lobby {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .lobby-box { background: #1a1a1a; padding: 40px; border-radius: 20px; border: 2px solid #ff0055; text-align: center; }
+        input.lobby-in { padding: 10px; font-size: 1.5rem; text-align: center; margin: 10px; background: #333; color: white; border: none; }
+        .btn-p { padding: 10px 30px; font-size: 1.5rem; cursor: pointer; border: none; margin: 5px; font-family: 'Teko'; }
+        
+        /* HUD */
+        #ui-layer { position: absolute; inset: 0; pointer-events: none; display: none; }
+        .speedo { position: absolute; bottom: 20px; right: 20px; font-size: 4rem; text-shadow: 2px 2px #000; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+    <div id="lobby">
+        <div class="lobby-box">
+            <h1>CITY DRIFT ONLINE</h1>
+            <button class="btn-p" style="background:#ff0055;color:white" onclick="createRoom()">CREATE WORLD</button>
+            <p>OR</p>
+            <input type="text" id="roomInput" class="lobby-in" placeholder="Enter Code">
+            <button class="btn-p" style="background:#00f3ff;color:black" onclick="joinRoom()">JOIN FRIENDS</button>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div id="chat-sidebar">
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Press Enter to Chat...">
+        </div>
+
+        <div id="code-sidebar">
+            <div class="side-btn" onclick="document.getElementById('code-sidebar').classList.toggle('open')">🔑</div>
+            <h3 style="margin:0;color:#00f3ff">ROOM CODE</h3>
+            <p id="display-code" style="font-size:2rem;margin:5px 0">----</p>
+            <button class="btn-p" style="width:100%;font-size:1.2rem;background:#333;color:white" onclick="copyCode()">COPY LINK</button>
+        </div>
+
+        <div class="speedo"><span id="speed-val">0</span> KM/H</div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <script>
+        // --- FIREBASE SETUP ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
+            authDomain: "formywebfirebase.firebaseapp.com",
+            databaseURL: "https://formywebfirebase-default-rtdb.firebaseio.com",
+            projectId: "formywebfirebase",
+            storageBucket: "formywebfirebase.firebasestorage.app",
+            messagingSenderId: "451953941862",
+            appId: "1:451953941862:web:b5f8394f99e17b232f3ca7"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- GAME VARIABLES ---
+        let scene, camera, renderer, car, oppCar;
+        let speed = 0, carDir = 0, roomId, myId, oppId;
+        let keys = { up:0, down:0, left:0, right:0 };
+        const playerName = localStorage.getItem('playerName') || "Guest";
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 50, 800);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            
+            // City Generation (Simplified for Multiplayer)
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000,1000), new THREE.MeshStandardMaterial({color:0x4CAF50}));
+            ground.rotation.x = -Math.PI/2; scene.add(ground);
+
+            // Vehicles
+            car = createCar(0xff0000, playerName); scene.add(car);
+            oppCar = createCar(0x00f3ff, "Waiting..."); scene.add(oppCar);
+
+            setupControls();
+            animate();
+        }
+
+        function createCar(color, name) {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 4.5), new THREE.MeshStandardMaterial({color: color}));
+            body.position.y = 0.5; group.add(body);
+
+            // Name Tag Sprite
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 256; canvas.height = 64;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,256,64);
+            ctx.font = 'bold 36px Teko'; ctx.fillStyle = 'white'; ctx.textAlign = 'center';
+            ctx.fillText(name, 128, 45);
+            
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(canvas)}));
+            sprite.position.y = 3.5; sprite.scale.set(4, 1, 1);
+            group.add(sprite);
+            group.userData.label = sprite;
+            return group;
+        }
+
+        // --- LIVE SYNCING LOGIC ---
+        function createRoom() {
+            roomId = Math.floor(1000 + Math.random() * 9000).toString();
+            myId = 'p1'; oppId = 'p2';
+            db.ref('car_world/' + roomId).set({ 
+                status: 'waiting', 
+                p1: { x:0, z:0, r:0, n:playerName } 
+            });
+            document.getElementById('display-code').innerText = roomId;
+            waitForPlayer();
+        }
+
+        function joinRoom() {
+            roomId = document.getElementById('roomInput').value;
+            if(!roomId) return;
+            myId = 'p2'; oppId = 'p1';
+            db.ref('car_world/' + roomId).update({ 
+                status: 'playing', 
+                p2: { x:10, z:10, r:0, n:playerName } 
+            });
+            startMultiplayer();
+        }
+
+        function waitForPlayer() {
+            db.ref('car_world/' + roomId + '/status').on('value', snap => {
+                if(snap.val() === 'playing') startMultiplayer();
+            });
+        }
+
+        function startMultiplayer() {
+            document.getElementById('lobby').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'block';
+            document.getElementById('display-code').innerText = roomId;
+            init();
+            
+            // Live Update Opponent
+            db.ref('car_world/' + roomId + '/' + oppId).on('value', snap => {
+                const data = snap.val();
+                if(data) {
+                    oppCar.position.x = data.x;
+                    oppCar.position.z = data.z;
+                    oppCar.rotation.y = data.r;
+                    // Update name tag if it says "Waiting"
+                    if(data.n) updateNameTag(oppCar, data.n);
+                }
+            });
+
+            // Live Chat Listen
+            db.ref('car_world/' + roomId + '/chat').on('child_added', snap => {
+                const msg = snap.val();
+                const div = document.createElement('div');
+                div.innerHTML = `<b style="color:#00f3ff">${msg.user}:</b> ${msg.text}`;
+                const box = document.getElementById('chat-messages');
+                box.appendChild(div);
+                box.scrollTop = box.scrollHeight;
+            });
+        }
+
+        function updateNameTag(carObj, name) {
+            const canvas = carObj.userData.label.material.map.image;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0,256,64);
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,256,64);
+            ctx.fillStyle = 'white'; ctx.fillText(name, 128, 45);
+            carObj.userData.label.material.map.needsUpdate = true;
+        }
+
+        // --- CONTROLS & PHYSICS ---
+        function update() {
+            let accel = keys.up ? 0.08 : (keys.down ? -0.05 : 0);
+            speed = (speed + accel) * 0.95;
+            if(Math.abs(speed) > 0.1) carDir += keys.left ? 0.04 : (keys.right ? -0.04 : 0);
+
+            car.position.x += Math.sin(carDir) * speed;
+            car.position.z += Math.cos(carDir) * speed;
+            car.rotation.y = carDir;
+
+            // SYNC POSITION TO FIREBASE
+            db.ref('car_world/' + roomId + '/' + myId).update({
+                x: car.position.x, z: car.position.z, r: carDir
+            });
+
+            camera.position.lerp(new THREE.Vector3(car.position.x - Math.sin(carDir)*12, 6, car.position.z - Math.cos(carDir)*12), 0.1);
+            camera.lookAt(car.position);
+            document.getElementById('speed-val').innerText = Math.floor(Math.abs(speed)*80);
+        }
+
+        function animate() { requestAnimationFrame(animate); if(car) update(); renderer.render(scene, camera); }
+
+        function setupControls() {
+            window.addEventListener('keydown', e => {
+                if(e.key === 'Enter') { sendChat(); return; }
+                if(e.key==='w'||e.key==='ArrowUp') keys.up=1;
+                if(e.key==='s'||e.key==='ArrowDown') keys.down=1;
+                if(e.key==='a'||e.key==='ArrowLeft') keys.left=1;
+                if(e.key==='d'||e.key==='ArrowRight') keys.right=1;
+            });
+            window.addEventListener('keyup', e => {
+                if(e.key==='w'||e.key==='ArrowUp') keys.up=0;
+                if(e.key==='s'||e.key==='ArrowDown') keys.down=0;
+                if(e.key==='a'||e.key==='ArrowLeft') keys.left=0;
+                if(e.key==='d'||e.key==='ArrowRight') keys.right=0;
+            });
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            if(!input.value) return;
+            db.ref('car_world/' + roomId + '/chat').push({
+                user: playerName, text: input.value
+            });
+            input.value = "";
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(roomId);
+            alert("Code Copied: " + roomId);
+        }
+    </script>
+</body>
+</html>
