@@ -114,7 +114,7 @@
     </div>
 
     <script>
-        // Automatic Redirection Logic
+        // 1. Automatic Redirection Logic
         let timeLeft = 6;
         const timerDisplay = document.getElementById('seconds');
 
@@ -128,19 +128,22 @@
             }
         }, 1000);
 
-      //Text Change Logic (for extra style!)
-      let timeLeft2 = 2;
-        const timerDispla2 = document.getElementById('sending');
-        const timerDisplay3 = document.getElementById('sending2');
+        // 2. Text Change Logic (Fixed Syntax Errors)
+        let timeLeft2 = 2;
+        const statusElement = document.getElementById('sending');
+        const messageElement = document.getElementById('sending2');
 
         const countdown2 = setInterval(() => {
             timeLeft2--;
-            timerDisplay2.textContent = "Status: <span id="send">Sending...</span>";
-            timerDisplay3.textContent = "Your message is sending...";
-          
-            if (timeLeft2 <= 0) {
-              timerDisplay2.textContent = "Status: <span id="send">Sent!</span>";
-              timerDisplay3.textContent = "Your message is sent sucessfully! You will get your answer as soon as possible!";
+            
+            if (timeLeft2 > 0) {
+                // Use .innerHTML and single quotes for IDs to avoid crashes
+                statusElement.innerHTML = 'Status: <span id="send">Sending...</span>';
+                messageElement.textContent = "Your message is sending...";
+            } else {
+                statusElement.innerHTML = 'Status: <span id="send" style="color:var(--neon-blue)">Sent!</span>';
+                messageElement.textContent = "Your message was sent successfully! You will get your answer as soon as possible!";
+                clearInterval(countdown2); // Stop this timer once sent
             }
         }, 1000);
     </script>
