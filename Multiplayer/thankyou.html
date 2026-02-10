@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sent Sucessfully!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff0055;
+            --bg-dark: #0a0a0c;
+            --neon-red: #ff3737;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Teko', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 50px;
+            border-radius: 20px;
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 30px var(--neon-blue), inset 0 0 15px var(--neon-blue);
+            max-width: 500px;
+            width: 90%;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px var(--neon-blue); }
+            to { box-shadow: 0 0 40px var(--neon-blue); }
+        }
+
+        h1 {
+            font-size: 4rem;
+            margin: 0;
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px var(--neon-blue);
+            letter-spacing: 3px;
+        }
+
+        p {
+            font-size: 1.5rem;
+            color: #ccc;
+            margin: 20px 0;
+        }
+
+        .status {
+            color: var(--neon-pink);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .btn-home {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 30px;
+            background: var(--neon-pink);
+            color: white;
+            text-decoration: none;
+            font-size: 1.8rem;
+            border-radius: 5px;
+            transition: 0.3s;
+            box-shadow: 0 0 15px var(--neon-pink);
+        }
+
+        .btn-home:hover {
+            transform: scale(1.1);
+            background: white;
+            color: var(--neon-pink);
+        }
+
+        .timer-text {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #666;
+        }
+
+        #seconds {
+            color: var(--neon-blue);
+            font-weight: bold;
+        }
+              #send {
+            color: var(--neon-red);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>MESSAGE SENT</h1>
+        <p class="status" id="sending">Status: <span id="send">Sending...</span></p>
+        <p id="sending2">Your mmessage is sending...</p>
+        
+        <a href="../index.html" class="btn-home">Back to Home</a>
+
+        <div class="timer-text">
+            Automatic redirect in <span id="seconds">6</span>s
+        </div>
+    </div>
+
+    <script>
+        // Automatic Redirection Logic
+        let timeLeft = 6;
+        const timerDisplay = document.getElementById('seconds');
+
+        const countdown = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                window.location.href = "../index.html";
+            }
+        }, 1000);
+
+      //Text Change Logic (for extra style!)
+      let timeLeft2 = 2;
+        const timerDispla2 = document.getElementById('sending');
+        const timerDisplay3 = document.getElementById('sending2');
+
+        const countdown2 = setInterval(() => {
+            timeLeft2--;
+            timerDisplay2.textContent = "Status: <span id="send">Sending...</span>";
+            timerDisplay3.textContent = "Your message is sending...";
+          
+            if (timeLeft2 <= 0) {
+              timerDisplay2.textContent = "Status: <span id="send">Sent!</span>";
+              timerDisplay3.textContent = "Your message is sent sucessfully! You will get your answer as soon as possible!";
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
