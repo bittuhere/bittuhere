@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>City Drift Online | Mobile Multiplayer</title>
+    <title>City Drift Online | Pro Multiplayer</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
         
@@ -16,7 +16,7 @@
             position: absolute; top: 100px; right: -250px; width: 220px;
             background: black; border: 2px solid #2ecc71;
             padding: 15px; border-radius: 10px 0 0 10px; transition: 0.5s;
-            pointer-events: auto; z-index: 500;
+            pointer-events: auto; z-index: 1200;
         }
         #code-sidebar.open { right: 0; }
         .side-btn { 
@@ -25,20 +25,18 @@
             justify-content: center; cursor: pointer; border-radius: 5px 0 0 5px; font-size: 1.5rem;
         }
 
-        /* --- INVITE SIDEBAR STYLE (Fixed z-index) --- */
+        /* --- INVITE SIDEBAR STYLE --- */
         .invite-toggle-btn {
             position: absolute; top: 20px; right: 20px; background: transparent;
             border: none; color: #2ecc71; font-size: 2.5rem; cursor: pointer;
-            z-index: 1100; /* Higher than Lobby (1000) */
-            text-shadow: 0 0 5px white; transition: transform 0.3s;
+            z-index: 1300; text-shadow: 0 0 5px white; transition: transform 0.3s;
             pointer-events: auto;
         }
         .sidebar-menu {
             position: fixed; top: 0; right: 0; width: 280px; height: 100%;
             background: rgba(10, 10, 10, 0.95); border-left: 2px solid #2ecc71;
             transform: translateX(100%); transition: transform 0.4s ease;
-            z-index: 1200; /* Higher than Lobby */
-            display: flex; flex-direction: column; padding: 20px;
+            z-index: 1400; display: flex; flex-direction: column; padding: 20px;
             pointer-events: auto;
         }
         .sidebar-menu.active { transform: translateX(0); }
@@ -160,13 +158,15 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let scene, camera, renderer, car, oppCar;
-        let speed = 0, carDir = 0, roomId, myId, oppId;
+        let scene, camera, renderer, car;
+        let otherPlayers = {}; // Stores other player cars
+        let speed = 0, carDir = 0, roomId, myId;
         let keys = { up:0, down:0, left:0, right:0 };
         let buildings = [];
         const playerName = localStorage.getItem('playerName') || "Driver";
 
         function init3D() {
+            if (scene) return; // Prevent double load
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
             camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1500);
@@ -180,38 +180,24 @@
             sun.position.set(50, 100, 50); scene.add(sun);
 
             createMap();
-            car = createVehicle(0xe74c3c, playerName); scene.add(car);
-            oppCar = createVehicle(0x3498db, "Friend"); scene.add(oppCar);
+            car = createVehicle(0xe74c3c, playerName); 
+            scene.add(car);
 
             setupControls();
             animate();
         }
 
+        // --- MAP DESIGN PRESERVED ---
         function createMap() {
-            const ground = new THREE.Mesh(
-                new THREE.PlaneGeometry(3000,3000),
-                new THREE.MeshStandardMaterial({ color: 0x4caf50 })
-            );
-            ground.rotation.x = -Math.PI/2;
-            scene.add(ground);
-
-            const roadMat = new THREE.MeshStandardMaterial({
-                color: 0x222222,
-                polygonOffset: true,
-                polygonOffsetFactor: -1,
-                polygonOffsetUnits: -4
-            });
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000,3000), new THREE.MeshStandardMaterial({ color: 0x4caf50 }));
+            ground.rotation.x = -Math.PI/2; scene.add(ground);
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
 
             for(let i = -1500; i <= 1500; i += 120) {
                 const r1 = new THREE.Mesh(new THREE.PlaneGeometry(3000, 26), roadMat);
-                r1.rotation.x = -Math.PI/2;
-                r1.position.set(0, 0.02, i);
-                scene.add(r1);
-
+                r1.rotation.x = -Math.PI/2; r1.position.set(0, 0.02, i); scene.add(r1);
                 const r2 = new THREE.Mesh(new THREE.PlaneGeometry(26, 3000), roadMat);
-                r2.rotation.x = -Math.PI/2;
-                r2.position.set(i, 0.02, 0);
-                scene.add(r2);
+                r2.rotation.x = -Math.PI/2; r2.position.set(i, 0.02, 0); scene.add(r2);
             }
 
             buildings.length = 0;
@@ -219,50 +205,30 @@
                 for(let z = -10; z <= 10; z++) {
                     if (x % 2 === 0 || z % 2 === 0) continue;
                     const h = 30 + Math.random() * 70;
-                    const b = new THREE.Mesh(
-                        new THREE.BoxGeometry(28, h, 28),
-                        new THREE.MeshStandardMaterial({
-                            color: new THREE.Color().setHSL(0, 0, 0.75 + Math.random()*0.1)
-                        })
-                    );
-                    b.position.set(x * 120, h / 2, z * 120);
-                    scene.add(b);
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(28, h, 28), new THREE.MeshStandardMaterial({color: new THREE.Color().setHSL(0, 0, 0.75 + Math.random()*0.1)}));
+                    b.position.set(x * 120, h / 2, z * 120); scene.add(b);
                     buildings.push(new THREE.Box3().setFromObject(b));
                 }
             }
         }
 
         function createVehicle(color, name) {
-            const car = new THREE.Group();
+            const group = new THREE.Group();
             const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.8, 4.8), new THREE.MeshStandardMaterial({color: color, metalness: 0.6, roughness: 0.35}));
-            body.position.y = 0.6;
-            car.add(body);
-
+            body.position.y = 0.6; group.add(body);
             const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 2.4), new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.4}));
-            cabin.position.set(0, 1.1, -0.4);
-            car.add(cabin);
-
-            const wheelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 16);
-            wheelGeo.rotateZ(Math.PI / 2);
+            cabin.position.set(0, 1.1, -0.4); group.add(cabin);
+            const wheelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 16); wheelGeo.rotateZ(Math.PI / 2);
             const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
             [[1.2, 0.4, 1.7],[-1.2, 0.4, 1.7],[1.2, 0.4, -1.7],[-1.2, 0.4, -1.7]].forEach(p => {
-                const w = new THREE.Mesh(wheelGeo, wheelMat);
-                w.position.set(p[0], p[1], p[2]);
-                car.add(w);
+                const w = new THREE.Mesh(wheelGeo, wheelMat); w.position.set(p[0], p[1], p[2]); group.add(w);
             });
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 256; canvas.height = 64;
-            ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(0,0,256,64);
-            ctx.font = 'bold 36px Teko'; ctx.fillStyle = '#222'; ctx.textAlign = 'center';
-            ctx.fillText(name, 128, 44);
-            const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) }));
-            label.position.y = 3.2; label.scale.set(4, 1, 1);
-            car.add(label);
-            return car;
+            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); canvas.width = 256; canvas.height = 64; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(0,0,256,64); ctx.font = 'bold 36px Teko'; ctx.fillStyle = '#222'; ctx.textAlign = 'center'; ctx.fillText(name, 128, 44);
+            const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) })); label.position.y = 3.2; label.scale.set(4, 1, 1); group.add(label);
+            return group;
         }
 
+        // --- INVITE LOGIC ---
         function toggleInviteSidebar() {
             const sidebar = document.getElementById('inviteSidebar');
             sidebar.classList.toggle('active');
@@ -289,53 +255,52 @@
             if (!roomId) return alert("Create a world first!");
             const chatId = [playerName, friendName].sort().join('_');
             db.ref('chats/' + chatId).push({
-                sender: playerName, text: "🏎️ Join my Car Game 3d Multiplayer! Code: " + roomId, timestamp: Date.now()
+                sender: playerName, text: "🏎️ Join my Car Game 3d Multiplaer World! Code: " + roomId, timestamp: Date.now()
             });
             alert(`Invite sent to ${friendName}!`);
             toggleInviteSidebar();
         }
 
-        function setupControls() {
-            const bindTouch = (id, key) => {
-                const el = document.getElementById(id);
-                el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = 1; }, {passive: false});
-                el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = 0; }, {passive: false});
-            };
-            bindTouch('touch-gas', 'up'); bindTouch('touch-brake', 'down');
-            bindTouch('touch-left', 'left'); bindTouch('touch-right', 'right');
-
-            window.onkeydown = e => {
-                if(e.key === 'Enter') sendChat();
-                if(e.key==='w'||e.key==='ArrowUp') keys.up=1;
-                if(e.key==='s'||e.key==='ArrowDown') keys.down=1;
-                if(e.key==='a'||e.key==='ArrowLeft') keys.left=1;
-                if(e.key==='d'||e.key==='ArrowRight') keys.right=1;
-            };
-            window.onkeyup = e => {
-                if(e.key==='w'||e.key==='ArrowUp') keys.up=0;
-                if(e.key==='s'||e.key==='ArrowDown') keys.down=0;
-                if(e.key==='a'||e.key==='ArrowLeft') keys.left=0;
-                if(e.key==='d'||e.key==='ArrowRight') keys.right=0;
-            };
-        }
-
+        // --- 5 PLAYER & DELAYED START LOGIC ---
         function createRoom() {
             roomId = Math.floor(1000 + Math.random() * 9000).toString();
-            myId = 'p1'; oppId = 'p2';
-            db.ref('car_world/' + roomId).set({ status: 'waiting', p1: { x:0, z:0, r:0, n:playerName } }).then(() => {
-                document.getElementById('status-msg').innerHTML = `Room: <b>${roomId}</b>. Waiting...`;
+            myId = 'p1'; 
+            db.ref('car_world/' + roomId).set({ 
+                status: 'waiting', 
+                players: { p1: { x:0, z:0, r:0, n:playerName, color: 0xe74c3c } } 
+            }).then(() => {
                 document.getElementById('display-code').innerText = roomId;
                 document.getElementById('inviteBtn').style.display = 'block';
-                db.ref('car_world/' + roomId + '/status').on('value', snap => { if(snap.val() === 'playing') startGame(); });
+                document.getElementById('status-msg').innerHTML = `Room Ready: <b>${roomId}</b><br>Invite friends to start!`;
+                
+                toggleInviteSidebar(); // AUTO OPEN SIDEBAR
+
+                // WAIT FOR OTHERS BEFORE STARTING
+                db.ref('car_world/' + roomId + '/players').on('value', snap => {
+                    if (snap.numChildren() > 1) {
+                        db.ref('car_world/' + roomId).update({ status: 'playing' });
+                        startGame();
+                        db.ref('car_world/' + roomId + '/players').off('value'); // Stop listening for join
+                    }
+                });
             });
         }
 
         function joinRoom() {
             const code = document.getElementById('roomInput').value;
             db.ref('car_world/' + code).once('value').then(snap => {
-                if(!snap.exists()) return alert("No Room!");
-                roomId = code; myId = 'p2'; oppId = 'p1';
-                db.ref('car_world/' + roomId).update({ status: 'playing', p2: { x:20, z:20, r:0, n:playerName } }).then(startGame);
+                if (!snap.exists()) return alert("Room not found!");
+                const room = snap.val();
+                let players = room.players || {};
+                let slot = null;
+                for (let i = 1; i <= 5; i++) { if (!players['p' + i]) { slot = 'p' + i; break; } }
+                if (!slot) return alert("World is Full! (Max 5)");
+                
+                roomId = code; myId = slot;
+                const pColor = [0x3498db, 0x2ecc71, 0xf1c40f, 0x9b59b6][Math.floor(Math.random()*4)];
+                db.ref('car_world/' + roomId + '/players/' + myId).set({ 
+                    x: Math.random()*20, z: Math.random()*20, r:0, n:playerName, color: pColor 
+                }).then(startGame);
             });
         }
 
@@ -343,13 +308,22 @@
             document.getElementById('lobby').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'block';
             document.getElementById('inviteBtn').style.display = 'block';
-            if(!scene) init3D();
-            db.ref('car_world/' + roomId + '/' + oppId).on('value', snap => {
-                const d = snap.val(); if(d && oppCar) { 
-                    oppCar.position.set(d.x, 0.4, d.z); 
-                    oppCar.rotation.y = d.r; 
+            init3D();
+            
+            // Sync REAL Names and Positions
+            db.ref('car_world/' + roomId + '/players').on('value', snap => {
+                const players = snap.val();
+                for (let id in players) {
+                    if (id === myId) continue;
+                    if (!otherPlayers[id]) {
+                        otherPlayers[id] = createVehicle(players[id].color || 0x3498db, players[id].n || "Player");
+                        scene.add(otherPlayers[id]);
+                    }
+                    otherPlayers[id].position.set(players[id].x, 0.4, players[id].z);
+                    otherPlayers[id].rotation.y = players[id].r;
                 }
             });
+
             db.ref('car_world/' + roomId + '/chat').on('child_added', snap => {
                 const m = snap.val(); const div = document.createElement('div');
                 div.innerHTML = `<b>${m.user}:</b> ${m.text}`;
@@ -368,7 +342,9 @@
             for(let b of buildings) if(cBox.intersectsBox(b)) { hit = true; break; }
             if(!hit) {
                 car.position.set(nx, 0.4, nz);
-                if(Math.abs(speed) > 0.01) db.ref('car_world/' + roomId + '/' + myId).update({ x: nx, z: nz, r: carDir });
+                if (roomId && myId && Math.abs(speed) > 0.01) {
+                    db.ref('car_world/' + roomId + '/players/' + myId).update({ x: nx, z: nz, r: carDir });
+                }
             } else { speed = -speed * 0.4; }
             car.rotation.y = carDir;
             camera.position.lerp(new THREE.Vector3(car.position.x - Math.sin(carDir)*12, 6, car.position.z - Math.cos(carDir)*12), 0.1);
@@ -381,7 +357,30 @@
             const i = document.getElementById('chat-input'); if(!i.value) return;
             db.ref('car_world/' + roomId + '/chat').push({ user: playerName, text: i.value }); i.value = "";
         }
-        function copyCode() { navigator.clipboard.writeText(roomId); alert("Copied!"); }
+        function copyCode() { navigator.clipboard.writeText(roomId); alert("Copied Code: " + roomId); }
+
+        function setupControls() {
+            const bindTouch = (id, key) => {
+                const el = document.getElementById(id);
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = 1; }, {passive: false});
+                el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = 0; }, {passive: false});
+            };
+            bindTouch('touch-gas', 'up'); bindTouch('touch-brake', 'down');
+            bindTouch('touch-left', 'left'); bindTouch('touch-right', 'right');
+            window.onkeydown = e => {
+                if(e.key === 'Enter') sendChat();
+                if(e.key==='w'||e.key==='ArrowUp') keys.up=1;
+                if(e.key==='s'||e.key==='ArrowDown') keys.down=1;
+                if(e.key==='a'||e.key==='ArrowLeft') keys.left=1;
+                if(e.key==='d'||e.key==='ArrowRight') keys.right=1;
+            };
+            window.onkeyup = e => {
+                if(e.key==='w'||e.key==='ArrowUp') keys.up=0;
+                if(e.key==='s'||e.key==='ArrowDown') keys.down=0;
+                if(e.key==='a'||e.key==='ArrowLeft') keys.left=0;
+                if(e.key==='d'||e.key==='ArrowRight') keys.right=0;
+            };
+        }
     </script>
 </body>
 </html>
