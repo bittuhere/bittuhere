@@ -14,7 +14,7 @@
         /* 2. SIDEBARS (Responsive) */
         #code-sidebar {
             position: absolute; top: 100px; right: -250px; width: 220px;
-            background: rgba(255,255,255,0.9); border: 2px solid #2ecc71;
+            background: black; border: 2px solid #2ecc71;
             padding: 15px; border-radius: 10px 0 0 10px; transition: 0.5s;
             pointer-events: auto; z-index: 500;
         }
@@ -289,7 +289,7 @@
             if (!roomId) return alert("Create a world first!");
             const chatId = [playerName, friendName].sort().join('_');
             db.ref('chats/' + chatId).push({
-                sender: playerName, text: "🏎️ Join my Car Drift game! Code: " + roomId, timestamp: Date.now()
+                sender: playerName, text: "🏎️ Join my Car Game 3d Multiplayer! Code: " + roomId, timestamp: Date.now()
             });
             alert(`Invite sent to ${friendName}!`);
             toggleInviteSidebar();
