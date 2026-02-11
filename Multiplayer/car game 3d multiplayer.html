@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>City Drift Online | Pro Multiplayer</title>
+    <title>City Drift Online</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
         
-        /* 1. MOBILE-FIRST RESET */
         * { touch-action: none; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Teko', sans-serif; color: #333; user-select: none; }
         
-        /* FIX: Ensure the 3D game is visible and full-screen */
         #game-container { position: fixed; inset: 0; z-index: 1; display: block; }
 
-        /* 2. SIDEBARS */
+        /* SIDEBARS */
         #code-sidebar {
             position: absolute; top: 100px; right: -250px; width: 220px;
-            background: rgba(0,0,0,0.9); border: 2px solid #2ecc71;
+            background: rgba(0,0,0,0.95); border: 2px solid #2ecc71;
             padding: 15px; border-radius: 10px 0 0 10px; transition: 0.5s;
-            pointer-events: auto; z-index: 1200;
+            pointer-events: auto; z-index: 1200; color: white;
         }
         #code-sidebar.open { right: 0; }
         .side-btn { 
@@ -28,7 +26,6 @@
             justify-content: center; cursor: pointer; border-radius: 5px 0 0 5px; font-size: 1.5rem;
         }
 
-        /* --- INVITE SIDEBAR STYLE --- */
         .invite-toggle-btn {
             position: absolute; top: 20px; right: 20px; background: transparent;
             border: none; color: #2ecc71; font-size: 2.5rem; cursor: pointer;
@@ -43,10 +40,7 @@
             pointer-events: auto;
         }
         .sidebar-menu.active { transform: translateX(0); }
-        .sidebar-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px;
-        }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
         .close-btn { background: transparent; border: none; color: #ff0055; font-size: 2.5rem; cursor: pointer; }
         #invite-list { overflow-y: auto; flex-grow: 1; }
 
@@ -59,7 +53,6 @@
         #chat-messages { flex: 1; overflow-y: auto; padding: 8px; font-size: 1rem; font-family: sans-serif; color: #000; }
         #chat-input { background: rgba(255,255,255,0.5); border: none; padding: 8px; color: #000; font-family: 'Teko'; font-size: 1.2rem; outline: none; }
 
-        /* 3. MOBILE TOUCH CONTROLS */
         #ui-layer { position: absolute; inset: 0; pointer-events: none; display: none; padding: 20px; z-index: 1100; }
         .controls-container { position: absolute; bottom: 30px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: auto; }
         .btn-touch { width: 75px; height: 75px; background: rgba(255,255,255,0.3); border: 2px solid #fff; border-radius: 50%; color: #333; display: flex; align-items: center; justify-content: center; font-size: 2rem; backdrop-filter: blur(5px); }
@@ -67,7 +60,6 @@
         .gas { background: rgba(46, 204, 113, 0.4); border-color: #2ecc71; }
         .brake { background: rgba(231, 76, 60, 0.4); border-color: #e74c3c; }
 
-        /* 4. LOBBY */
         #lobby { position: absolute; inset: 0; background: #87CEEB; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
         .lobby-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .btn-p { padding: 10px 25px; font-size: 1.5rem; cursor: pointer; border: none; margin: 5px; font-family: 'Teko'; border-radius: 8px; width: 100%; }
@@ -135,6 +127,7 @@
         let keys = { up:0, down:0, left:0, right:0 };
         let buildings = [];
         const playerName = localStorage.getItem('playerName') || "Driver";
+        let isGameStarted = false;
 
         function init3D() {
             if (scene) return;
@@ -158,7 +151,6 @@
             animate();
         }
 
-        // --- MAP DESIGN PRESERVED ---
         function createMap() {
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000,3000), new THREE.MeshStandardMaterial({ color: 0x4caf50 }));
             ground.rotation.x = -Math.PI/2; scene.add(ground);
@@ -194,45 +186,34 @@
             return group;
         }
 
-        // --- MOBILE ROTATION LOGIC ---
         function handleMobileRotation() {
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            if (isMobile) {
+            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().then(() => {
-                        if (screen.orientation && screen.orientation.lock) {
-                            screen.orientation.lock('landscape').catch(e => console.log("Orientation lock requires interaction."));
-                        }
+                        if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
                     });
                 }
             }
         }
 
-        // --- INVITE SIDEBAR ---
         function toggleInviteSidebar() { const s = document.getElementById('inviteSidebar'); s.classList.toggle('active'); if (s.classList.contains('active')) loadFriendsForInvite(); }
         function loadFriendsForInvite() { if (!playerName) return; db.ref('friends/' + playerName).once('value', snapshot => { const list = document.getElementById('invite-list'); list.innerHTML = ""; if (snapshot.exists()) { Object.keys(snapshot.val()).forEach(friendName => { const div = document.createElement('div'); div.style.cssText = "background:#222; padding:15px; margin-bottom:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333;"; div.innerHTML = `<span style="color:white; font-size:1.1rem;">${friendName}</span><button onclick="sendInvite('${friendName}')" style="background:#2ecc71; color:black; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.8rem; font-family:'Teko';">SEND CODE</button>`; list.appendChild(div); }); } else list.innerHTML = "<p style='color:#666;'>No friends found.</p>"; }); }
-        function sendInvite(friendName) { if (!roomId) return alert("Create a world first!"); const chatId = [playerName, friendName].sort().join('_'); db.ref('chats/' + chatId).push({ sender: playerName, text: "🏎️ Join my Car Game 3D Multiplayer World! Code: " + roomId, timestamp: Date.now() }); alert(`Invite sent to ${friendName}!`); toggleInviteSidebar(); }
+        function sendInvite(friendName) { if (!roomId) return alert("Create a world first!"); const chatId = [playerName, friendName].sort().join('_'); db.ref('chats/' + chatId).push({ sender: playerName, text: "Join my Car World Game 3D Multiplayer! Code: " + roomId, timestamp: Date.now() }); alert(`Invite sent to ${friendName}!`); toggleInviteSidebar(); }
 
-        // --- 5 PLAYER & WORLD LOGIC ---
         function createRoom() { 
             roomId = Math.floor(1000 + Math.random() * 9000).toString(); 
             myId = 'p1'; 
-            db.ref('car_world/' + roomId).set({ 
-                status: 'waiting', 
-                players: { p1: { x:0, z:0, r:0, n:playerName, color: 0xe74c3c } } 
-            }).then(() => { 
+            db.ref('car_world/' + roomId).set({ status: 'waiting', players: { p1: { x:0, z:0, r:0, n:playerName, color: 0xe74c3c } } }).then(() => { 
                 document.getElementById('display-code').innerText = roomId; 
                 document.getElementById('inviteBtn').style.display = 'block'; 
-                document.getElementById('status-msg').innerHTML = `Room: <b>${roomId}</b>. Waiting for friends...`;
-                toggleInviteSidebar(); // IMMEDIATE OPEN
-                handleMobileRotation(); // AUTO ROTATE START
-                
-                // Wait for at least one friend to start
+                document.getElementById('status-msg').innerHTML = `Room Ready: <b>${roomId}</b>. Waiting for a friend...`;
+                toggleInviteSidebar(); // AUTO OPEN INVITE
+                handleMobileRotation();
+                // WAIT FOR OTHERS (Sync Fix: Removed .off())
                 db.ref('car_world/' + roomId + '/players').on('value', snap => {
-                    if(snap.numChildren() > 1) {
-                        db.ref('car_world/' + roomId).update({ status: 'playing' });
+                    if(!isGameStarted && snap.numChildren() > 1) {
+                        isGameStarted = true;
                         startGame();
-                        db.ref('car_world/' + roomId + '/players').off('value');
                     }
                 });
             }); 
@@ -241,16 +222,17 @@
         function joinRoom() { 
             const code = document.getElementById('roomInput').value; 
             db.ref('car_world/' + code).once('value').then(snap => { 
-                if(!snap.exists()) return alert("No Room!"); 
+                if(!snap.exists()) return alert("Room not found!"); 
                 const players = snap.val().players || {};
                 let slot = null;
                 for(let i=1; i<=5; i++) if(!players['p'+i]) { slot = 'p'+i; break; }
-                if(!slot) return alert("Room Full (Max 5)!");
+                if(!slot) return alert("World Full!");
 
                 roomId = code; myId = slot;
                 const pColor = [0x3498db, 0x2ecc71, 0xf1c40f, 0x9b59b6][Math.floor(Math.random()*4)];
-                db.ref('car_world/' + roomId + '/players/' + myId).set({ x:Math.random()*20, z:Math.random()*20, r:0, n:playerName, color:pColor }).then(() => {
-                    handleMobileRotation(); // AUTO ROTATE START
+                db.ref('car_world/' + roomId + '/players/' + myId).set({ x:Math.random()*10, z:Math.random()*10, r:0, n:playerName, color:pColor }).then(() => {
+                    isGameStarted = true;
+                    handleMobileRotation();
                     startGame();
                 });
             }); 
@@ -262,7 +244,7 @@
             document.getElementById('inviteBtn').style.display = 'block';
             init3D();
             
-            // Sync Real Usernames
+            // Sync REAL Names and Persistent Positions
             db.ref('car_world/' + roomId + '/players').on('value', snap => {
                 const players = snap.val();
                 for (let id in players) {
@@ -282,11 +264,10 @@
             let accel = keys.up ? 0.08 : (keys.down ? -0.05 : 0);
             speed = (speed + accel) * 0.95;
             if(Math.abs(speed) > 0.1) carDir += keys.left ? 0.05 : (keys.right ? -0.05 : 0);
-            const nx = car.position.x + Math.sin(carDir) * speed;
-            const nz = car.position.z + Math.cos(carDir) * speed;
-            const cBox = new THREE.Box3(new THREE.Vector3(nx-1,0,nz-2), new THREE.Vector3(nx+1,2,nz+2));
+            const nx = car.position.x + Math.sin(carDir) * speed, nz = car.position.z + Math.cos(carDir) * speed;
+            const cBox = new THREE.Box3(new THREE.Vector3(nx-1.2,0,nz-2.5), new THREE.Vector3(nx+1.2,2,nz+2.5));
             let hit = false;
-            for(let b of buildings) { if(Math.abs(b.min.x - nx) < 50 && cBox.intersectsBox(b)) { hit = true; break; } }
+            for(let b of buildings) if(cBox.intersectsBox(b)) { hit = true; break; }
             if(!hit) {
                 car.position.set(nx, 0.4, nz);
                 if (roomId && myId && Math.abs(speed) > 0.01) db.ref('car_world/' + roomId + '/players/' + myId).update({ x: nx, z: nz, r: carDir });
