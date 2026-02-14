@@ -3,25 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dino Game | Pro Hub</title>
+    <title>Dino Game</title>
     <style>
         body { margin: 0; padding: 0; background-color: #202124; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; touch-action: none; }
         #game-container { position: relative; width: 95%; max-width: 800px; height: 250px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-        #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
+        
+        /* --- LOADER STYLE --- */
+        #loader { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #fff; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 50; 
+            cursor: pointer;
+        }
+        #play-text { color: #888; font-size: 16px; font-weight: bold; margin-top: 10px; display: none; }
 
         /* --- GAME OVER UI --- */
         #game-over-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.8); z-index: 20;
+            background: rgba(255, 255, 255, 0.85); z-index: 20;
             flex-direction: column; align-items: center; justify-content: center;
         }
         .go-title { color: #535353; font-size: 2.5rem; margin: 0 0 15px 0; }
         .btn-group { display: flex; gap: 10px; }
         .game-btn {
-            padding: 8px 20px; font-size: 1.1rem; cursor: pointer; border: 2px solid #535353;
+            padding: 10px 25px; font-size: 1.1rem; cursor: pointer; border: 2px solid #535353;
             background: #fff; color: #535353; border-radius: 5px; font-weight: bold;
-            text-decoration: none; transition: 0.2s;
+            text-decoration: none; transition: 0.2s; font-family: inherit;
         }
         .game-btn:hover { background: #535353; color: #fff; }
         .btn-rank { border-color: #f1c40f; color: #f1c40f; }
@@ -43,8 +51,9 @@
     </div>
 
     <div id="loader">
-        <h2 style="color:#535353">Dino Game</h2>
-        <p style="color:#888; font-size:14px;">Tap or Press Space to start</p>
+        <h2 style="color:#535353; margin:0;">Dino Game</h2>
+        <p id="loading-status" style="color:#aaa; font-size:14px;">Loading assets...</p>
+        <p id="play-text">TAP TO PLAY</p>
     </div>
 </div>
 
@@ -70,6 +79,8 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const loader = document.getElementById('loader');
+    const playText = document.getElementById('play-text');
+    const loadingStatus = document.getElementById('loading-status');
     const gameOverScreen = document.getElementById('game-over-screen');
 
     const GAME_WIDTH = 800;
@@ -95,20 +106,29 @@
         for (let key in ASSETS) {
             const img = new Image();
             img.src = ASSETS[key];
-            img.onload = () => { if (++assetsLoaded === Object.keys(ASSETS).length) initInteraction(); };
+            img.onload = () => { 
+                assetsLoaded++;
+                if (assetsLoaded === Object.keys(ASSETS).length) {
+                    loadingStatus.style.display = 'none';
+                    playText.style.display = 'block';
+                    loader.onclick = initInteraction; // Wait for user click to start
+                }
+            };
             images[key] = img;
         }
     }
 
-    // --- 3. MOBILE ROTATION ---
+    // --- 3. MOBILE ROTATION (Robust Fix) ---
     function handleMobileRotation() {
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().then(() => {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) {
+                docElm.requestFullscreen().then(() => {
                     if (screen.orientation && screen.orientation.lock) {
                         screen.orientation.lock('landscape').catch(() => {});
                     }
-                });
+                }).catch(() => {});
             }
         }
     }
@@ -170,18 +190,16 @@
     }
 
     function initInteraction() {
-        const start = () => {
-            loader.style.display = 'none';
-            window.removeEventListener('keydown', start);
-            window.removeEventListener('touchstart', start);
-            handleMobileRotation();
-            resetGame();
+        handleMobileRotation(); // Trigger rotation on first click
+        loader.style.display = 'none';
+        resetGame();
+        if (!isLoopRunning) {
             gameLoop();
-        };
-        window.addEventListener('keydown', start);
-        window.addEventListener('touchstart', start);
+            isLoopRunning = true;
+        }
     }
 
+    let isLoopRunning = false;
     function resetGame() { 
         isGameOver = false; isPlaying = true; score = 0; gameSpeed = 6; obstacles = []; dino.dy = 0; frame = 0; 
         gameOverScreen.style.display = 'none';
@@ -217,13 +235,17 @@
 
     function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
 
+    // --- CONTROLS ---
     window.addEventListener('keydown', e => {
+        if (loader.style.display !== 'none') return;
         if (e.code === 'Space' || e.code === 'ArrowUp') { if (isGameOver) resetGame(); else dino.jump(); }
         if (e.code === 'ArrowDown') dino.ducking = true;
     });
     window.addEventListener('keyup', e => { if (e.code === 'ArrowDown') dino.ducking = false; });
+    
+    // Mobile touch triggers jump
     window.addEventListener('touchstart', e => { 
-        if (isGameOver) return; // Let buttons handle clicks
+        if (loader.style.display !== 'none' || isGameOver) return; 
         dino.jump(); 
     }, {passive: false});
 
