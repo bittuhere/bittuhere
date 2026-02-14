@@ -142,10 +142,11 @@
 
     <div class="board-container">
         <div class="game-selector">
-            <select id="gameSelect" onchange="loadLeaderboard()">
-                <option value="flappy_highscore">🐦 Flappy Bird</option>
-            </select>
-        </div>
+    <select id="gameSelect" onchange="loadLeaderboard()">
+        <option value="flappy_highscore">🐦 Flappy Bird</option>
+        <option value="dino_highscore">🦖 Dino Game</option>
+    </select>
+</div>
 
         <div id="loading" style="text-align:center; color:#888;">Loading scores...</div>
         <div id="score-list"></div>
@@ -223,5 +224,6 @@
         loadLeaderboard();
     </script>
 </body>
+
 
 </html>
