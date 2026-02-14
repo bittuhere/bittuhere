@@ -3,23 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dino Game</title>
+    <title>Dino Game | Pro Hub</title>
     <style>
         body { margin: 0; padding: 0; background-color: #202124; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; touch-action: none; }
-        #game-container { position: relative; width: 100%; max-width: 800px; height: 250px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #game-container { position: relative; width: 95%; max-width: 800px; height: 250px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
         #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
-        .error-msg { color: red; font-size: 12px; margin-top: 10px; white-space: pre; }
+
+        /* --- GAME OVER UI --- */
+        #game-over-screen {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8); z-index: 20;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .go-title { color: #535353; font-size: 2.5rem; margin: 0 0 15px 0; }
+        .btn-group { display: flex; gap: 10px; }
+        .game-btn {
+            padding: 8px 20px; font-size: 1.1rem; cursor: pointer; border: 2px solid #535353;
+            background: #fff; color: #535353; border-radius: 5px; font-weight: bold;
+            text-decoration: none; transition: 0.2s;
+        }
+        .game-btn:hover { background: #535353; color: #fff; }
+        .btn-rank { border-color: #f1c40f; color: #f1c40f; }
+        .btn-rank:hover { background: #f1c40f; color: #fff; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <canvas id="gameCanvas"></canvas>
+    
+    <div id="game-over-screen">
+        <h2 class="go-title">GAME OVER</h2>
+        <div class="btn-group">
+            <button class="game-btn" onclick="resetGame()">RESTART</button>
+            <a href="../Leaderboard/leaderboard.html" class="game-btn btn-rank">RANK</a>
+            <a href="../index.html" class="game-btn">HOME</a>
+        </div>
+    </div>
+
     <div id="loader">
-        <h2 style="color:#535353; text-algin: center;">DINO GAME<br>Leaderboard Game</h2>
-        <p style="color:#888; font-size:14px;">Press Space or Tap to start</p>
-        <div id="debug-log" class="error-msg"></div>
+        <h2 style="color:#535353">Dino Game</h2>
+        <p style="color:#888; font-size:14px;">Tap or Press Space to start</p>
     </div>
 </div>
 
@@ -45,7 +70,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const loader = document.getElementById('loader');
-    const debugLog = document.getElementById('debug-log');
+    const gameOverScreen = document.getElementById('game-over-screen');
 
     const GAME_WIDTH = 800;
     const GAME_HEIGHT = 250;
@@ -61,7 +86,7 @@
         dinoDead: 'dino-dead.png', cactus1: 'cactus1.png', cactus2: 'cactus2.png',
         cactus3: 'cactus3.png', bigCactus1: 'big-cactus1.png', bigCactus2: 'big-cactus2.png',
         bigCactus3: 'big-cactus3.png', bird1: 'bird1.png', bird2: 'bird2.png',
-        cloud: 'cloud.png', track: 'track.png', gameOver: 'game-over.png', reset: 'reset.png'
+        cloud: 'cloud.png', track: 'track.png'
     };
 
     const images = {};
@@ -71,28 +96,30 @@
             const img = new Image();
             img.src = ASSETS[key];
             img.onload = () => { if (++assetsLoaded === Object.keys(ASSETS).length) initInteraction(); };
-            img.onerror = () => { debugLog.innerText += `\n❌ Missing: ${ASSETS[key]}`; };
             images[key] = img;
         }
     }
 
-    // --- 3. CLOUD SYNC LOGIC ---
+    // --- 3. MOBILE ROTATION ---
+    function handleMobileRotation() {
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(() => {});
+                    }
+                });
+            }
+        }
+    }
+
     function saveDinoScoreToCloud(finalScore) {
         const playerName = localStorage.getItem('playerName');
         if (!playerName) return;
-
-        const userId = playerName.toLowerCase().trim();
-        const userRef = db.ref('users/' + userId);
-
+        const userRef = db.ref('users/' + playerName.toLowerCase().trim());
         userRef.once('value', (snapshot) => {
-            const currentData = snapshot.val() || {};
-            const oldHigh = currentData.dino_highscore || 0;
-
-            if (finalScore > oldHigh) {
-                userRef.update({ 
-                    dino_highscore: finalScore,
-                    lastUpdated: Date.now() 
-                }).then(() => console.log("Score synced to GitHub/Firebase!"));
+            if (finalScore > (snapshot.val()?.dino_highscore || 0)) {
+                userRef.update({ dino_highscore: finalScore, lastUpdated: Date.now() });
             }
         });
     }
@@ -108,9 +135,9 @@
             if (!this.grounded) { this.dy += GRAVITY; this.y += this.dy; }
             if (this.y + this.h >= GROUND_Y) { this.y = GROUND_Y - this.h; this.dy = 0; this.grounded = true; } 
             else this.grounded = false;
-
-            if (this.ducking) { this.w = 59; this.h = 30; if(this.grounded) this.y = GROUND_Y - this.h; } 
-            else { this.w = 44; this.h = 47; }
+            this.h = this.ducking ? 30 : 47;
+            this.w = this.ducking ? 59 : 44;
+            if(this.ducking && this.grounded) this.y = GROUND_Y - this.h;
         },
         draw: function() {
             let sprite = isGameOver ? images.dinoDead : (!this.grounded ? images.dinoJump : (this.ducking ? (Math.floor(frame / 6) % 2 === 0 ? images.dinoDuck1 : images.dinoDuck2) : (Math.floor(frame / 6) % 2 === 0 ? images.dinoRun1 : images.dinoRun2)));
@@ -147,6 +174,7 @@
             loader.style.display = 'none';
             window.removeEventListener('keydown', start);
             window.removeEventListener('touchstart', start);
+            handleMobileRotation();
             resetGame();
             gameLoop();
         };
@@ -154,7 +182,10 @@
         window.addEventListener('touchstart', start);
     }
 
-    function resetGame() { isGameOver = false; isPlaying = true; score = 0; gameSpeed = 6; obstacles = []; dino.dy = 0; frame = 0; }
+    function resetGame() { 
+        isGameOver = false; isPlaying = true; score = 0; gameSpeed = 6; obstacles = []; dino.dy = 0; frame = 0; 
+        gameOverScreen.style.display = 'none';
+    }
 
     function update() {
         if (!isPlaying) return;
@@ -166,6 +197,7 @@
                 isGameOver = true; isPlaying = false;
                 if(Math.floor(score) > highScore) { highScore = Math.floor(score); localStorage.setItem('dinoHighScore', highScore); }
                 saveDinoScoreToCloud(Math.floor(score));
+                gameOverScreen.style.display = 'flex';
             }
         });
         obstacles = obstacles.filter(o => !o.markedForDeletion);
@@ -181,10 +213,6 @@
         obstacles.forEach(o => o.draw()); dino.draw();
         ctx.fillStyle = '#535353'; ctx.font = '20px Consolas, monospace';
         ctx.fillText(`HI ${highScore.toString().padStart(5, '0')}  ${Math.floor(score).toString().padStart(5, '0')}`, GAME_WIDTH - 220, 30);
-        if (isGameOver) {
-            ctx.drawImage(images.gameOver, GAME_WIDTH/2 - 96, GAME_HEIGHT/2 - 40);
-            ctx.drawImage(images.reset, GAME_WIDTH/2 - 17, GAME_HEIGHT/2 + 20);
-        }
     }
 
     function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
@@ -193,12 +221,13 @@
         if (e.code === 'Space' || e.code === 'ArrowUp') { if (isGameOver) resetGame(); else dino.jump(); }
         if (e.code === 'ArrowDown') dino.ducking = true;
     });
-    document.addEventListener('keyup', e => { if (e.code === 'ArrowDown') dino.ducking = false; });
-    document.addEventListener('touchstart', e => { if (isGameOver) resetGame(); else dino.jump(); }, {passive: false});
+    window.addEventListener('keyup', e => { if (e.code === 'ArrowDown') dino.ducking = false; });
+    window.addEventListener('touchstart', e => { 
+        if (isGameOver) return; // Let buttons handle clicks
+        dino.jump(); 
+    }, {passive: false});
 
     loadImages();
 </script>
 </body>
 </html>
-
-
