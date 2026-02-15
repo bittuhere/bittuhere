@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        // SECURITY CHECK
+        // If user is not logged in, kick them to login.html
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = '../LoginPlease/login.html';
+        }
+    </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Real City Drift – Balanced Edition</title>
@@ -391,3 +398,4 @@ renderer.setSize(innerWidth,innerHeight)
 </script>
 </body>
 </html>
+
