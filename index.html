@@ -197,12 +197,77 @@
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
+    /* Find where your Friend button style ends and add this */
+.notif-btn {
+    position: relative;
+    width: 45px;
+    height: 45px;
+    background: #333;
+    border: 2px solid #2ecc71;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: 0.3s;
+}
+.red-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: red;
+    border-radius: 50%;
+    border: 2px solid #1a1a1a;
+    display: none; /* Default hidden */
+}
+/* Modal for announcements */
+#notif-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+.notif-content {
+    background: #222;
+    padding: 20px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    border: 1px solid #2ecc71;
+    color: white;
+}
+.notif-btn { position: static; cursor: pointer; width: 45px; height: 45px; background: #222; border: 2px solid #2ecc71; border-radius: 50%; display: flex; align-items: center; justify-content: center;}
+.red-dot { position: absolute; top: 0; right: 0; width: 12px; height: 12px; background: red; border-radius: 50%; border: 2px solid white; display: none; }
+
+
     </style>
 </head>
 
 <body>
 
     <a href="Friends/chat.html" class="friends-btn-top">👥 Friends</a>
+    <div class="notif-btn" onclick="openNotifications()">
+    🔔
+    <div id="notif-dot" class="red-dot"></div>
+</div>
+
+<div id="notif-modal" onclick="closeNotifications()">
+    <div class="notif-content" onclick="event.stopPropagation()">
+        <h3>📢 Announcements</h3>
+        <hr border="1" color="#333">
+        <div id="notif-messages" style="max-height: 200px; overflow-y: auto;">
+            Loading...
+        </div>
+        <button onclick="closeNotifications()" style="margin-top:15px; width:100%; padding:10px; background:#2ecc71; border:none; border-radius:5px; color:white; font-weight:bold;">CLOSE</button>
+    </div>
+</div>
+
     <a href="Leaderboard/leaderboard.html" class="leaderboard-btn-top">🏆 Leaderboard</a>
 
     <div class="container">
@@ -237,7 +302,7 @@
                 <a href="CarGame3D/Car Game 3D.html" class="game-btn btn-car full-width"><span>🏎️</span> Real City Drift</a>
                 <a href="Falppy Bird/Flappy Bird by html.html" class="game-btn btn-flappy"><span>🐦</span> Flappy Bird<br>(Leaderboard Game)</a>
 		        <a href="DinoGame/index.html" class="game-btn btn-dino"><span>🦖</span> Dino Game<br>(Leaderboard Game)</a>
-				<a href="Pac-Man/Pac Man by html.html" class="game-btn btn-pacman"><span>ᗧ</span> Pac-Man</a>
+			       	<a href="Pac-Man/Pac Man by html.html" class="game-btn btn-pacman"><span>ᗧ</span> Pac-Man</a>
                 <a href="TicTacToe/Tic-Tac-Toe.html" class="game-btn" style="background: linear-gradient(45deg, #00f3ff, #0099ff);"><span>❌⭕</span> Tic Tac Toe</a>
                 <a href="Rock files/RockPaperScissor Random.html" class="game-btn" style="background: linear-gradient(45deg, #00a2ff, #d9ff00);"><span>🎲</span> RPS (Random)</a>
                 <a href="Rock files/Rock Paper Scissors.html" class="game-btn btn-rps full-width"><span>✂️</span> Rock Paper Scissors</a>
@@ -272,8 +337,97 @@
             <button onclick="logout()" class="logout-btn">Logout</button>
         </div>
     </div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
+            // --- FIREBASE SETUP ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
+            authDomain: "formywebfirebase.firebaseapp.com",
+            databaseURL: "https://formywebfirebase-default-rtdb.firebaseio.com",
+            projectId: "formywebfirebase",
+            storageBucket: "formywebfirebase.firebasestorage.app",
+            messagingSenderId: "451953941862",
+            appId: "1:451953941862:web:b5f8394f99e17b232f3ca7",
+            measurementId: "G-JD1YFCG7G3"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+    // Variable to store notifications
+let latestNotifTime = 0;
+
+function checkNotifications() {
+    const myName = localStorage.getItem('playerName').toLowerCase().trim();
+    const lastSeen = localStorage.getItem('lastReadNotif') || 0;
+    const dot = document.getElementById('notif-dot');
+    let hasUnread = false;
+
+    // Check Global
+    db.ref('notifications/global').on('value', snap => {
+        const data = snap.val();
+        if(data) {
+            Object.values(data).forEach(n => { if(n.time > lastSeen) hasUnread = true; });
+            if(hasUnread) dot.style.display = 'block';
+            renderNotifications();
+        }
+    });
+
+    // Check Private
+    db.ref('notifications/private/' + myName).on('value', snap => {
+        const data = snap.val();
+        if(data) {
+            Object.values(data).forEach(n => { if(n.time > lastSeen) hasUnread = true; });
+            if(hasUnread) dot.style.display = 'block';
+            renderNotifications();
+        }
+    });
+}
+
+function renderNotifications() {
+    const myName = (localStorage.getItem('playerName') || "Gamer").toLowerCase().trim();
+    const list = document.getElementById('notif-messages');
+    
+    // Clear loading text if no data exists yet
+    list.innerHTML = "<p style='text-align:center; color:#888;'>No new notifications.</p>";
+
+    db.ref('notifications').once('value', snap => {
+        const all = snap.val();
+        if(!all) return;
+        
+        list.innerHTML = ""; // Clear text to show messages
+        let combined = [];
+        
+        if(all.global) Object.values(all.global).forEach(m => { m.type='global'; combined.push(m); });
+        if(all.private && all.private[myName]) Object.values(all.private[myName]).forEach(m => { m.type='private'; combined.push(m); });
+
+        combined.sort((a,b) => b.time - a.time).forEach(n => {
+            const div = document.createElement('div');
+            const prefix = n.type === 'private' ? '🔒 [PRIVATE]' : '📢 [GLOBAL]';
+            div.innerHTML = `<p style="color:#2ecc71; margin:0; font-size:0.8rem;">${prefix} - ${new Date(n.time).toLocaleDateString()}</p>
+                             <p style="margin:5px 0 10px 0;">${n.message}</p><hr style="border:0.1px solid #333">`;
+            list.appendChild(div);
+        });
+    });
+}
+
+
+
+function openNotifications() {
+    document.getElementById('notif-modal').style.display = 'flex';
+    // Notification dekhte hi dot hatana
+    localStorage.setItem('lastReadNotif', Date.now());
+    document.getElementById('notif-dot').style.display = 'none';
+}
+
+function closeNotifications() {
+    document.getElementById('notif-modal').style.display = 'none';
+}
+
+// Start checking when page loads
+checkNotifications();
+
         // --- SECURITY CHECK ---
         if (localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = 'LoginPlease/login.html';
