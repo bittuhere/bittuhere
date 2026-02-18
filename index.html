@@ -359,8 +359,10 @@
 let latestNotifTime = 0;
 
 function checkNotifications() {
-    const myName = localStorage.getItem('playerName').toLowerCase().trim();
+    const rawName = localStorage.getItem('playerName');
+    const myName = (rawName ? rawName.toLowerCase().trim() : "gamer");
     const lastSeen = localStorage.getItem('lastReadNotif') || 0;
+
     const dot = document.getElementById('notif-dot');
     let hasUnread = false;
 
