@@ -583,9 +583,14 @@
             const isToday = date.toDateString() === now.toDateString();
 
             if (isToday) {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                // FIX: Added hour12: true for 12-hour clock with AM/PM
+                return date.toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
             } else {
-                // Full Date Format: DD/MM/YYYY
+                // Full Date Format remains the same: DD/MM/YYYY
                 const d = date.getDate().toString().padStart(2, '0');
                 const m = (date.getMonth() + 1).toString().padStart(2, '0');
                 const y = date.getFullYear();
