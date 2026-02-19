@@ -160,19 +160,56 @@
             gap: 10px;
         }
 
+                /* WhatsApp Style Bubbles */
         .message {
-            max-width: 70%;
-            padding: 10px 15px;
-            border-radius: 15px;
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 8px;
             font-size: 0.95rem;
-            word-wrap: break-word;
+            position: relative;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
-
         .msg-sent {
             align-self: flex-end;
-            background: #00f3ff;
-            color: black;
+            background: #dcf8c6;
+            color: #000;
+            border-bottom-right-radius: 2px;
         }
+        .msg-received {
+            align-self: flex-start;
+            background: #ffffff;
+            color: #000;
+            border-bottom-left-radius: 2px;
+        }
+                        .msg-time {
+            font-size: 0.65rem;
+            color: #666;
+            align-self: flex-end;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .msg-status {
+            font-size: 0.8rem;
+            font-weight: bold;
+            letter-spacing: -2px; /* For double tick look */
+        }
+        .tick-read { color: #34b7f1; } /* Blue Tick */
+        .tick-sent { color: #999; }     /* Grey Tick */
+
+        .status-sub {
+            font-size: 0.75rem;
+            color: #2ecc71; /* Green for online */
+            font-weight: normal;
+        }
+        .status-offline {
+            color: #888;
+        }
+
 
         .msg-received {
             align-self: flex-start;
@@ -311,6 +348,22 @@
 
         // --- USER SETUP ---
         const myName = localStorage.getItem('playerName');
+                // --- ONLINE/PRESENCE SYSTEM ---
+        const userStatusRef = db.ref('status/' + myName);
+        db.ref('.info/connected').on('value', (snap) => {
+            if (snap.val() === false) return;
+            // Jab connect ho toh status 'online' set karein
+            userStatusRef.onDisconnect().set({
+                state: 'offline',
+                last_changed: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                userStatusRef.set({
+                    state: 'online',
+                    last_changed: firebase.database.ServerValue.TIMESTAMP
+                });
+            });
+        });
+
 
         if (!myName || localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = 'login.html';
@@ -323,23 +376,42 @@
         // --- LOAD FRIENDS ---
         const friendsList = document.getElementById('friends-list');
 
-        db.ref('friends/' + myName).on('value', (snapshot) => {
+                db.ref('friends/' + myName).on('value', (snapshot) => {
             friendsList.innerHTML = '';
             if (snapshot.exists()) {
                 const friends = snapshot.val();
                 Object.keys(friends).forEach(friendName => {
                     const div = document.createElement('div');
                     div.className = 'friend-item';
-                    div.innerHTML = `<span>${friendName}</span> <small>></small>`;
+                    div.id = 'friend-' + friendName;
+                    div.innerHTML = `
+                        <div style="display:flex; flex-direction:column;">
+                            <span>${friendName}</span>
+                            <small id="status-${friendName}" class="status-sub">Checking...</small>
+                        </div>
+                        <small>></small>`;
                     div.onclick = () => openChat(friendName);
-
-                    if (currentChatFriend === friendName) div.classList.add('active');
                     friendsList.appendChild(div);
+
+                    // Har friend ka live status dhoondna
+                    db.ref('status/' + friendName).on('value', (stSnap) => {
+                        const st = stSnap.val();
+                        const stEl = document.getElementById('status-' + friendName);
+                        if(!stEl) return;
+                        if(st && st.state === 'online') {
+                            stEl.innerText = 'online';
+                            stEl.className = 'status-sub';
+                        } else if (st) {
+                            stEl.innerText = 'last seen ' + formatTime(st.last_changed);
+                            stEl.className = 'status-sub status-offline';
+                        } else {
+                            stEl.innerText = 'offline';
+                        }
+                    });
                 });
-            } else {
-                friendsList.innerHTML = '<p style="color:#666; padding:10px;">No friends found.</p>';
             }
         });
+
 
         // --- ADD FRIEND ---
         function addFriend() {
@@ -359,7 +431,7 @@
                     status.innerText = "Added!"; status.style.color = "#00f3ff";
                     input.value = "";
                 } else {
-                    status.innerText = "User not found (Remove Capital Letters!)";
+                    status.innerText = "User not found (Replace capital by small letters!)";
                     status.style.color = "red";
                 }
             });
@@ -394,20 +466,54 @@
             document.getElementById('sendBtn').disabled = true;
         }
 
-        function loadMessages() {
+                        function loadMessages() {
             const msgContainer = document.getElementById('messages');
             msgContainer.innerHTML = '';
 
             db.ref('chats/' + currentChatId).off();
 
+            // 1. Initial Load and New Messages
             db.ref('chats/' + currentChatId).limitToLast(50).on('child_added', (snapshot) => {
                 const data = snapshot.val();
+                const msgId = snapshot.key;
                 const div = document.createElement('div');
-                div.className = 'message ' + (data.sender === myName ? 'msg-sent' : 'msg-received');
-                div.innerText = data.text;
+                div.id = 'msg-' + msgId;
+                
+                const isMine = data.sender === myName;
+                div.className = 'message ' + (isMine ? 'msg-sent' : 'msg-received');
+                
+                // Mark received messages as read
+                if (!isMine && !data.read) {
+                    db.ref('chats/' + currentChatId + '/' + msgId).update({ read: true });
+                }
+
+                // Double Tick UI
+                let statusHtml = '';
+                if (isMine) {
+                    const tickClass = data.read ? 'tick-read' : 'tick-sent';
+                    statusHtml = `<span class="msg-status ${tickClass}">✓✓</span>`;
+                }
+
+                div.innerHTML = `
+                    <span>${data.text}</span>
+                    <span class="msg-time">${formatTime(data.timestamp)} ${statusHtml}</span>
+                `;
+                
                 msgContainer.appendChild(div);
-                // Scroll to bottom every time a message is added
                 msgContainer.scrollTop = msgContainer.scrollHeight;
+            });
+
+            // 2. Real-time Blue Tick update when friend reads your message
+            db.ref('chats/' + currentChatId).on('child_changed', (snapshot) => {
+                const data = snapshot.val();
+                const msgEl = document.getElementById('msg-' + snapshot.key);
+                if (msgEl && data.read && data.sender === myName) {
+                    const tick = msgEl.querySelector('.msg-status');
+                    if (tick) {
+                        tick.classList.remove('tick-sent');
+                        tick.classList.add('tick-read');
+                    }
+                }
             });
         }
 
@@ -417,15 +523,34 @@
             if (!text) return;
 
             db.ref('chats/' + currentChatId).push({
-                sender: myName, text: text, timestamp: Date.now()
+                sender: myName, 
+                text: text, 
+                timestamp: Date.now(),
+                read: false // Message sent, but not yet read
             });
             input.value = "";
             input.focus();
         }
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const isToday = date.toDateString() === now.toDateString();
+
+            if (isToday) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else {
+                // Full Date Format: DD/MM/YYYY
+                const d = date.getDate().toString().padStart(2, '0');
+                const m = (date.getMonth() + 1).toString().padStart(2, '0');
+                const y = date.getFullYear();
+                return `${d}/${m}/${y}`;
+            }
+        }
+
 
         function handleKey(e) { if (e.key === "Enter") sendMessage(); }
-
+    
     </script>
 </body>
 
-</html>
+                </html>
