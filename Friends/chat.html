@@ -206,8 +206,16 @@
             color: #2ecc71; /* Green for online */
             font-weight: normal;
         }
-        .status-offline {
+                .status-offline {
             color: #888;
+        }
+        .unread-dot {
+            width: 12px;
+            height: 12px;
+            background: #2ecc71; /* WhatsApp Green color */
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+            display: none; /* Default hidden */
         }
 
 
@@ -384,16 +392,22 @@
                     const div = document.createElement('div');
                     div.className = 'friend-item';
                     div.id = 'friend-' + friendName;
+                    
+                    // Name, Status aur Dot ka structure
                     div.innerHTML = `
-                        <div style="display:flex; flex-direction:column;">
-                            <span>${friendName}</span>
-                            <small id="status-${friendName}" class="status-sub">Checking...</small>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="display:flex; flex-direction:column;">
+                                <span>${friendName}</span>
+                                <small id="status-${friendName}" class="status-sub">Checking...</small>
+                            </div>
+                            <div id="unread-${friendName}" class="unread-dot"></div>
                         </div>
                         <small>></small>`;
+                    
                     div.onclick = () => openChat(friendName);
                     friendsList.appendChild(div);
 
-                    // Har friend ka live status dhoondna
+                    // 1. Friend Online Status Listener
                     db.ref('status/' + friendName).on('value', (stSnap) => {
                         const st = stSnap.val();
                         const stEl = document.getElementById('status-' + friendName);
@@ -408,9 +422,26 @@
                             stEl.innerText = 'offline';
                         }
                     });
+
+                    // 2. Unread Message Listener for this friend
+                    const chatId = [myName, friendName].sort().join('_');
+                    db.ref('chats/' + chatId).on('value', chatSnap => {
+                        let hasUnread = false;
+                        const messages = chatSnap.val();
+                        if(messages) {
+                            // Check for any unread message from this friend
+                            hasUnread = Object.values(messages).some(m => m.sender === friendName && !m.read);
+                        }
+                        const dot = document.getElementById('unread-' + friendName);
+                        if(dot) {
+                            // Dot sirf tab dikhao jab message unread ho AUR aap us chat mein na hon
+                            dot.style.display = (hasUnread && currentChatFriend !== friendName) ? 'block' : 'none';
+                        }
+                    });
                 });
             }
         });
+
 
 
         // --- ADD FRIEND ---
@@ -431,7 +462,7 @@
                     status.innerText = "Added!"; status.style.color = "#00f3ff";
                     input.value = "";
                 } else {
-                    status.innerText = "User not found (Replace capital by small letters!)";
+                    status.innerText = "User not found (Remove Capital Letters!)";
                     status.style.color = "red";
                 }
             });
@@ -440,12 +471,27 @@
         // --- CHAT LOGIC ---
         function openChat(friendName) {
             currentChatFriend = friendName;
+            
+            // Home page dot ke liye timestamp update
+            localStorage.setItem('lastReadChat', Date.now());
 
             const participants = [myName, friendName].sort();
             currentChatId = participants.join('_');
 
-            document.getElementById('chat-title').innerText = "Chat: " + friendName;
+            // --- FIX: Mark ALL messages in this chat as READ immediately ---
+            db.ref('chats/' + currentChatId).once('value', snap => {
+                const msgs = snap.val();
+                if(msgs) {
+                    Object.keys(msgs).forEach(id => {
+                        // Agar message dost ne bheja hai aur read nahi hai, toh read kar do
+                        if(msgs[id].sender === friendName && !msgs[id].read) {
+                            db.ref('chats/' + currentChatId + '/' + id).update({ read: true });
+                        }
+                    });
+                }
+            });
 
+            document.getElementById('chat-title').innerText = "Chat: " + friendName;
             const msgInput = document.getElementById('msgInput');
             const sendBtn = document.getElementById('sendBtn');
             msgInput.disabled = false;
@@ -553,4 +599,4 @@
     </script>
 </body>
 
-                </html>
+</html>
