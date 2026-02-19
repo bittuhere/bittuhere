@@ -57,6 +57,19 @@
             transition: all 0.3s ease;
             z-index: 100;
         }
+        /* Chat notification dot */
+        #chat-notif-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 12px;
+            height: 12px;
+            background: red;
+            border-radius: 50%;
+            border: 2px solid #0f0c29;
+            display: none; /* Default hidden */
+        }
+
         .friends-btn-top:hover {
             background: #00f3ff; border-color: transparent; color: black;
             box-shadow: 0 0 15px #00f3ff; transform: translateY(-2px);
@@ -248,7 +261,11 @@
 
 <body>
 
-    <a href="Friends/chat.html" class="friends-btn-top">👥 Friends</a>
+    <a href="Friends/chat.html" class="friends-btn-top">
+    👥 Friends
+    <div id="chat-notif-dot"></div>
+</a>
+
     <div class="notif-btn" onclick="openNotifications()">
     🔔
     <div id="notif-dot" class="red-dot"></div>
@@ -351,6 +368,63 @@
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+            // --- CHAT NOTIFICATION LOGIC ---
+        function checkChatNotifications() {
+            const rawName = localStorage.getItem('playerName');
+            if(!rawName) return;
+            const myNameId = rawName.toLowerCase().trim();
+            const lastReadChat = localStorage.getItem('lastReadChat') || 0;
+            const chatDot = document.getElementById('chat-notif-dot');
+
+            // Listen to all chats
+            db.ref('chats').on('value', snap => {
+                const allChats = snap.val();
+                let unread = false;
+
+                if(allChats) {
+                    Object.keys(allChats).forEach(chatId => {
+                        // Check if this chat belongs to the current user
+                        if(chatId.includes(myNameId)) {
+                            const messages = Object.values(allChats[chatId]);
+                            messages.forEach(msg => {
+                                // Agar message mera nahi hai aur last seen ke baad aaya hai
+                                if(msg.sender !== rawName && msg.timestamp > lastReadChat) {
+                                    unread = true;
+                                }
+                            });
+                        }
+                    });
+                }
+                chatDot.style.display = unread ? 'block' : 'none';
+            });
+        }
+        // Call it
+        checkChatNotifications();
+
+
+        // --- HOME PAGE PRESENCE SYSTEM ---
+        const rawPlayerName = localStorage.getItem('playerName');
+        if (rawPlayerName && localStorage.getItem('isLoggedIn') === 'true') {
+            const myNameId = rawPlayerName.toLowerCase().trim();
+            const userStatusRef = db.ref('status/' + myNameId);
+
+            db.ref('.info/connected').on('value', (snap) => {
+                if (snap.val() === false) return;
+
+                // Jab user page band kare ya internet jaye
+                userStatusRef.onDisconnect().set({
+                    state: 'offline',
+                    last_changed: firebase.database.ServerValue.TIMESTAMP
+                }).then(() => {
+                    // Jab user online ho (home page par ho)
+                    userStatusRef.set({
+                        state: 'online',
+                        last_changed: firebase.database.ServerValue.TIMESTAMP
+                    });
+                });
+            });
+        }
+
 
     // Variable to store notifications
 let latestNotifTime = 0;
