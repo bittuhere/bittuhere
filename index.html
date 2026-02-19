@@ -199,18 +199,19 @@
         }
     /* Find where your Friend button style ends and add this */
 .notif-btn {
-    position: relative;
-    width: 45px;
-    height: 45px;
-    background: #333;
-    border: 2px solid #2ecc71;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: 0.3s;
+            position: absolute;
+            top: 62px; left: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            display: flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            z-index: 100;
 }
 .red-dot {
     position: absolute;
