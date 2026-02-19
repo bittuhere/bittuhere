@@ -207,8 +207,12 @@
             font-weight: normal;
         }
                 .status-offline {
-            color: #888;
+            color: #888; /* Grey for 'Last Seen' */
         }
+        .status-orange {
+            color: #ff9800; /* Orange for 'Offline' (Old Version) */
+        }
+
         .unread-dot {
             width: 12px;
             height: 12px;
@@ -412,16 +416,20 @@
                         const st = stSnap.val();
                         const stEl = document.getElementById('status-' + friendName);
                         if(!stEl) return;
+                        
                         if(st && st.state === 'online') {
                             stEl.innerText = 'online';
-                            stEl.className = 'status-sub';
-                        } else if (st) {
+                            stEl.className = 'status-sub'; // Green
+                        } else if (st && st.last_changed) {
                             stEl.innerText = 'last seen ' + formatTime(st.last_changed);
-                            stEl.className = 'status-sub status-offline';
+                            stEl.className = 'status-sub status-offline'; // Grey
                         } else {
+                            // FIX: Applied orange class for players with no 'last seen' data
                             stEl.innerText = 'offline';
+                            stEl.className = 'status-sub status-orange'; 
                         }
                     });
+
 
                     // 2. Unread Message Listener for this friend
                     const chatId = [myName, friendName].sort().join('_');
@@ -598,6 +606,7 @@
             }
         }
 
+          
 
         function handleKey(e) { if (e.key === "Enter") sendMessage(); }
     
