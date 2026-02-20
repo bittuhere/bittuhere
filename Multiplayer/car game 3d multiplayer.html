@@ -610,7 +610,7 @@ function drawMinimap() {
     for (let id in otherPlayers) {
         const p = otherPlayers[id];
         const dx = (p.position.x - car.position.x) * scale;
-        const dy = (p.position.z - car.position.z) * scale;
+        const dy = -(p.position.z - car.position.z) * scale;
         const dist = Math.sqrt(dx*dx + dy*dy);
         if (dist < 75) {
             minimapCtx.fillStyle = "red";
@@ -626,7 +626,7 @@ function drawMinimap() {
     }
     if (nearest) {
         const tx = (nearest.position.x - car.position.x) * scale;
-        const ty = (nearest.position.z - car.position.z) * scale;
+        const ty = -(nearest.position.z - car.position.z) * scale;
         minimapCtx.strokeStyle = "#00ffff";
         minimapCtx.setLineDash([5, 5]);
         minimapCtx.beginPath(); minimapCtx.moveTo(0, 0); minimapCtx.lineTo(tx, ty);
@@ -673,7 +673,7 @@ function drawMinimap() {
         chunk.children.forEach(obj => {
             if (obj.geometry?.type === "BoxGeometry") {
                 const dx = (obj.position.x - car.position.x) * scale;
-                const dy = (obj.position.z - car.position.z) * scale;
+                const dy = -(obj.position.z - car.position.z) * scale;
                 ctx.fillRect(dx - 5, dy - 5, 10, 10);
             }
         });
