@@ -181,12 +181,10 @@
 
         <span class="switch-link" onclick="toggleMode()" id="switch-btn">New here? Create ID</span>
     </div>
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+       <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // --- YOUR CONFIGURATION (Inserted Automatically) ---
         const firebaseConfig = {
             apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
             authDomain: "formywebfirebase.firebaseapp.com",
@@ -198,13 +196,9 @@
             measurementId: "G-JD1YFCG7G3"
         };
 
-        // Initialize Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Variables
         let isSignup = false;
 
         function toggleMode() {
@@ -215,7 +209,7 @@
             const switcher = document.getElementById('switch-btn');
             const status = document.getElementById('status');
 
-            status.innerText = ""; // Clear errors
+            status.innerText = ""; 
 
             if (isSignup) {
                 header.innerText = "SIGN UP";
@@ -253,24 +247,36 @@
             status.innerText = "";
 
             if (isSignup) {
-                // --- SIGN UP LOGIC ---
+                // --- SIGN UP LOGIC WITH ERROR HANDLING ---
                 db.ref('users/' + user).once('value').then((snapshot) => {
                     if (snapshot.exists()) {
                         loader.style.display = "none";
                         status.innerText = "Username taken! Choose another.";
                         status.className = "status-msg error";
                     } else {
-                        // Create user
+                        // Create user with default game data
                         db.ref('users/' + user).set({
                             password: pass,
-                            score: 0
+                            score: 0,
+                            vipCoins: 0,
+                            hp: 100
                         }).then(() => {
                             loader.style.display = "none";
                             status.innerText = "Account Created! Logging in...";
                             status.className = "status-msg success";
                             loginSuccess(user);
+                        }).catch(err => {
+                            // Agar write permission nahi hai (Firebase Rules Issue)
+                            loader.style.display = "none";
+                            status.innerText = "Error creating account. Check DB Rules!";
+                            status.className = "status-msg error";
+                            console.error(err);
                         });
                     }
+                }).catch(err => {
+                    loader.style.display = "none";
+                    status.innerText = "Database Connection Error.";
+                    status.className = "status-msg error";
                 });
 
             } else {
@@ -295,22 +301,25 @@
                 }).catch((error) => {
                     loader.style.display = "none";
                     status.innerText = "Connection Error.";
-                    console.error(error);
                 });
             }
         }
 
         function loginSuccess(username) {
-            // Save state
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('playerName', username);
-
             setTimeout(() => {
-                // Go to Main Menu
                 window.location.href = "../index.html";
             }, 1000);
         }
+
+        // Enter key support for better UX
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') processAuth();
+        });
     </script>
+ 
 </body>
+
 
 </html>
