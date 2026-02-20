@@ -248,27 +248,23 @@
 
             if (isSignup) {
                 // --- SIGN UP LOGIC WITH ERROR HANDLING ---
-                db.ref('users/' + user).once('value').then((snapshot) => {
-                    if (snapshot.exists()) {
-                        loader.style.display = "none";
-                        status.innerText = "Username taken! Choose another.";
-                        status.className = "status-msg error";
-                    } else {
-                        // Create user with default game data
-                        db.ref('users/' + user).set({
-                            password: pass,
-                            score: 0,
-                            vipCoins: 0,
-                            hp: 100
-                        }).then(() => {
-                            loader.style.display = "none";
-                            status.innerText = "Account Created! Logging in...";
-                            status.className = "status-msg success";
-                            loginSuccess(user);
-                        }).catch(err => {
+                // login.html update
+db.ref('users/' + user).set({
+    password: pass,
+    score: 0,
+    vipCoins: 0,    // Battle Royale Lobby ke liye
+    hp: 100,         // Battle Royale Match ke liye
+    flappy_highscore: 0,
+    dino_highscore: 0
+}).then(() => {
+    loader.style.display = "none";
+    status.innerText = "Account Created! Logging in...";
+    status.className = "status-msg success";
+    loginSuccess(user);
+}).catch(err => {
                             // Agar write permission nahi hai (Firebase Rules Issue)
                             loader.style.display = "none";
-                            status.innerText = "Error creating account. Check DB Rules!";
+                            status.innerText = "Error creating account!";
                             status.className = "status-msg error";
                             console.error(err);
                         });
@@ -323,3 +319,4 @@
 
 
 </html>
+
