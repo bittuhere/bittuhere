@@ -225,6 +225,7 @@
             backdrop-filter: blur(5px);
             transition: all 0.3s ease;
             z-index: 100;
+           /* pointer: ;*/
 }
 .red-dot {
     position: absolute;
@@ -256,12 +257,39 @@
     border: 1px solid #2ecc71;
     color: white;
 }
+    /* Loading Animation */
+#loading-overlay {
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(0,0,0,0.9); 
+    z-index: 10000; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    backdrop-filter: blur(10px);
+}
+.spinner {
+    width: 50px; 
+    height: 50px; 
+    border: 5px solid #333; 
+    border-top: 5px solid #00f3ff; 
+    border-radius: 50%; 
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     </style>
 </head>
 
 <body>
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <h2 style="margin-top:20px; color:#00f3ff; font-family:'Segoe UI',sans-serif; letter-spacing:3px;">LOADING...</h2>
+</div>
 
-    <a href="Friends/chat.html" class="friends-btn-top">
+
+    <a href="javascript:void(0)" onclick="loadPage('Friends/chat.html')" class="friends-btn-top">
     👥 Friends
     <div id="chat-notif-dot"></div>
 </a>
@@ -282,7 +310,7 @@
     </div>
 </div>
 
-    <a href="Leaderboard/leaderboard.html" class="leaderboard-btn-top">🏆 Leaderboard</a>
+    <a href="javascript:void(0)" onclick="loadPage('Leaderboard/leaderboard.html')" class="leaderboard-btn-top">🏆 Leaderboard</a>
 
     <div class="container">
         <h1 id="greeting">ARCADE HUB</h1>
@@ -298,28 +326,30 @@
         <div id="study-section" class="hidden">
             <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
             <div class="menu-grid">
-                <a href="Fair/Fair.html" class="game-btn btn-fair full-width"><span>📝</span> Fair Copies</a>
+                <a href="javascript:void(0)" onclick="loadPage('Fair/Fair.html')" class="game-btn btn-fair full-width"><span>📝</span> Fair Copies</a>
             </div>
         </div>
 
         <div id="multi-section" class="hidden">
             <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
             <div class="game-list-grid">
-                <a href="Multiplayer/T.T.T Online.html" class="game-btn btn-multi full-width"><span>⚔️</span> Tic Tac Toe Online</a>
-                 <a href="Multiplayer/car game 3d multiplayer.html" class="game-btn btn-multi full-width"><span>🚗</span> Car Game 3D<br>(Multiplayer)</a>
+                <a href="javascript:void(0)" onclick="loadPage('Multiplayer/T.T.T Online.html')" class="game-btn btn-multi full-width"><span>⚔️</span> Tic Tac Toe Online</a>
+                 <a href="javascript:void(0)" onclick="loadPage('Multiplayer/car game 3d multiplayer.html')" class="game-btn btn-multi full-width"><span>🚗</span> Car Game 3D<br>(Multiplayer)</a>
             </div>
         </div>
 
         <div id="single-section" class="hidden">
             <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
             <div class="game-list-grid">
-                <a href="CarGame3D/Car Game 3D.html" class="game-btn btn-car full-width"><span>🏎️</span> Real City Drift</a>
-                <a href="Falppy Bird/Flappy Bird by html.html" class="game-btn btn-flappy"><span>🐦</span> Flappy Bird<br>(Leaderboard Game)</a>
-		        <a href="DinoGame/index.html" class="game-btn btn-dino"><span>🦖</span> Dino Game<br>(Leaderboard Game)</a>
-			       	<a href="Pac-Man/Pac Man by html.html" class="game-btn btn-pacman"><span>ᗧ</span> Pac-Man</a>
-                <a href="TicTacToe/Tic-Tac-Toe.html" class="game-btn" style="background: linear-gradient(45deg, #00f3ff, #0099ff);"><span>❌⭕</span> Tic Tac Toe</a>
-                <a href="Rock files/RockPaperScissor Random.html" class="game-btn" style="background: linear-gradient(45deg, #00a2ff, #d9ff00);"><span>🎲</span> RPS (Random)</a>
-                <a href="Rock files/Rock Paper Scissors.html" class="game-btn btn-rps full-width"><span>✂️</span> Rock Paper Scissors</a>
+                <a href="javascript:void(0)" onclick="loadPage('CarGame3D/Car Game 3D.html')" class="game-btn btn-car full-width"><span>🏎️</span> Real City Drift</a>
+               <a class="game-btn btn-flappy" href="javascript:void(0)" onclick="loadPage('Falppy Bird/Flappy Bird by html.html')">
+    <span>🐦</span> Flappy Bird<br>(Leaderboard Game)
+</a>
+      <a class="game-btn btn-dino" href="javascript:void(0)" onclick="loadPage('DinoGame/index.html')"><span>🦖</span> Dino Game<br>(Leaderboard Game)</a>
+			       	<a href="javascript:void(0)" onclick="loadPage('Pac-Man/Pac Man by html.html')" class="game-btn btn-pacman"><span>ᗧ</span> Pac-Man</a>
+                <a href="javascript:void(0)" onclick="loadPage('TicTacToe/Tic-Tac-Toe.html')" class="game-btn" style="background: linear-gradient(45deg, #00f3ff, #0099ff);"><span>❌⭕</span> Tic Tac Toe</a>
+                <a href="javascript:void(0)" onclick="loadPage('Rock files/RockPaperScissor Random.html')" class="game-btn" style="background: linear-gradient(45deg, #00a2ff, #d9ff00);"><span>🎲</span> RPS (Random)</a>
+                <a href="javascript:void(0)" onclick="loadPage('Rock files/Rock Paper Scissors.html')" class="game-btn btn-rps full-width"><span>✂️</span> Rock Paper Scissors</a>
             </div>
         </div>
 
@@ -556,6 +586,16 @@ checkNotifications();
             localStorage.removeItem('isLoggedIn');
             window.location.href = 'LoginPlease/login.html';
         }
+function loadPage(url) {
+    const overlay = document.getElementById('loading-overlay');
+    if(overlay) overlay.style.display = 'flex';
+    
+    // 0.5 sec ka delay taaki animation dikhe
+    setTimeout(() => {
+        window.location.href = url;
+    }, 500);
+}
+
     </script>
 
 </body>
