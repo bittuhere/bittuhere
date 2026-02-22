@@ -295,6 +295,14 @@
 }
 
         updateSettingsUI();
+        // PC Friendly Controls (Arrow Keys & WASD)
+        document.addEventListener("keydown", e => {
+            const key = e.key.toLowerCase();
+            if (key === "arrowleft" || key === "a") changeDir("LEFT");
+            else if (key === "arrowup" || key === "w") changeDir("UP");
+            else if (key === "arrowright" || key === "d") changeDir("RIGHT");
+            else if (key === "arrowdown" || key === "s") changeDir("DOWN");
+        });
     </script>
 </body>
 </html>
