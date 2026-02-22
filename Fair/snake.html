@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake Leaderboard - Pro Fix</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
+        body { margin: 0; background: #0f0c29; color: white; font-family: 'Teko', sans-serif; overflow: hidden; touch-action: none; display: flex; align-items: center; justify-content: center; height: 90vh;}
+        #game-container { position: relative; width: 360px; height: 360px; border: 4px solid #00f3ff; box-shadow: 0 0 20px rgba(0, 243, 255, 0.3); }
+        canvas { background: #000; display: block; }
+        .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; text-align: center; height: 390px; width: 360px; border: 4px solid #00f3ff; box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);}
+        h1 { font-size: 3rem; margin: 0; color: #00f3ff; line-height: 1; }
+        .btn { background: #00f3ff; color: #000; border: none; padding: 10px 30px; font-family: 'Teko'; font-size: 1.5rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; }
+        .settings-btn { position: absolute; top: 10px; right: 10px; background: none; border: 2px solid #00f3ff; color: #00f3ff; font-family: 'Teko'; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; }
+    
+        #controls { position: fixed; bottom: 30px; display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; }
+        .ctrl-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.1); border: 1px solid #00f3ff; color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        #score-board { position: fixed; top: 20px; left: 20px; font-size: 2rem; color: #00f3ff; }
+        @keyframes gameOver { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-go { animation: gameOver 0.5s ease-out; }
+    </style>
+</head>
+<body>
+
+    <div id="score-board">Score: 0</div>
+
+    <div id="game-container">
+        <canvas id="snakeGame" width="360" height="360"></canvas>
+        <div id="home-screen" class="overlay">
+            <h1>Snake Game<br>(Leaderboard Game)</h1>
+            <button class="settings-btn" onclick="toggleSettings()">⚙</button>
+            <button class="btn" onclick="startGame()">START MISSION</button>
+        </div>
+        <div id="settings-screen" class="overlay" style="display: none;">
+            <h1>SETTINGS</h1>
+            <button class="btn" id="blocky-btn" onclick="setMode('blocky')">BLOCKY (Classic)</button>
+            <button class="btn" id="smooth-btn" onclick="setMode('smooth')">SMOOTH (Modern)</button>
+            <button class="btn" style="background:none; color:white; border:1px solid white;" onclick="toggleSettings()">BACK</button>
+        </div>
+        <div id="game-over" class="overlay" style="display: none;">
+            <h1 style="color: #ff3366;">GAME OVER</h1>
+            <p id="final-score">Score: 0</p>
+            <p id="high-score-msg" style="color: #00ff88;"></p>
+            <button class="btn" style="background: none; color: #dbad04; border:1px solid #dbad04; onclick="window.location.href='../Leaderboard/leaderboard.html'">RANK</button>
+            <button class="btn" style="background:none; color:#00f3ff; border:1px solid #00f3ff;" onclick="window.location.href='../index.html'">HOME</button>
+            <button class="btn" onclick="resetGame()">RETRY</button>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div></div><button class="ctrl-btn" onclick="changeDir('UP')">▲</button><div></div>
+        <button class="ctrl-btn" onclick="changeDir('LEFT')">◀</button>
+        <button class="ctrl-btn" onclick="changeDir('DOWN')">▼</button>
+        <button class="ctrl-btn" onclick="changeDir('RIGHT')">▶</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
+            authDomain: "formywebfirebase.firebaseapp.com",
+            databaseURL: "https://formywebfirebase-default-rtdb.firebaseio.com",
+            projectId: "formywebfirebase",
+            storageBucket: "formywebfirebase.firebasestorage.app",
+            messagingSenderId: "451953941862",
+            appId: "1:451953941862:web:b5f8394f99e17b232f3ca7"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const playerName = localStorage.getItem('playerName') || "Guest";
+    
+        const canvas = document.getElementById("snakeGame");
+        const ctx = canvas.getContext("2d");
+        const box = 20;
+        let snake, food, d, score, gameRunning = false;
+        let moveMode = localStorage.getItem('snakeMode') || 'blocky';
+        let moveTimer = 0;
+        const logicInterval = 260; // Speed ko thoda aur kam kiya gaya (Easy Mode)
+
+        function toggleSettings() {
+            const ss = document.getElementById('settings-screen');
+            ss.style.display = ss.style.display === 'none' ? 'flex' : 'none';
+            updateSettingsUI();
+        }
+
+        function setMode(mode) {
+            moveMode = mode;
+            localStorage.setItem('snakeMode', mode);
+            updateSettingsUI();
+        }
+
+        function updateSettingsUI() {
+            document.getElementById('blocky-btn').style.opacity = moveMode === 'blocky' ? '1' : '0.5';
+            document.getElementById('smooth-btn').style.opacity = moveMode === 'smooth' ? '1' : '0.5';
+        }
+
+        function initGameData() {
+            snake = [{ x: 9 * box, y: 10 * box, oldX: 9 * box, oldY: 10 * box }];
+            food = { x: Math.floor(Math.random() * 17 + 1) * box, y: Math.floor(Math.random() * 17 + 1) * box };
+            score = 0;
+            d = null;
+            moveTimer = 0;
+            document.getElementById('score-board').innerText = "Score: 0";
+        }
+
+        function startGame() {
+            document.getElementById("home-screen").style.display = "none";
+            document.getElementById("settings-screen").style.display = "none";
+            initGameData();
+            gameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function changeDir(dir) {
+            if (dir == "LEFT" && d != "RIGHT") d = "LEFT";
+            else if (dir == "UP" && d != "DOWN") d = "UP";
+            else if (dir == "RIGHT" && d != "LEFT") d = "RIGHT";
+            else if (dir == "DOWN" && d != "UP") d = "DOWN";
+        }
+
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Logic Timing
+            if (d) {
+                moveTimer += 16.6; // ~60fps increment
+                if (moveTimer >= logicInterval) {
+                    moveTimer = 0;
+                    updateLogic();
+                }
+            }
+
+            const progress = (moveMode === 'smooth' && d) ? Math.min(moveTimer / logicInterval, 1) : 0;
+
+            // Draw Snake
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillStyle = (i == 0) ? "#00f3ff" : "#006677";
+                
+                // Interpolated Position Calculation
+                let sX = (snake[i].oldX !== undefined) ? snake[i].oldX : snake[i].x;
+                let sY = (snake[i].oldY !== undefined) ? snake[i].oldY : snake[i].y;
+                let renderX = sX + (snake[i].x - sX) * progress;
+                let renderY = sY + (snake[i].y - sY) * progress;
+
+                ctx.fillRect(renderX, renderY, box, box);
+
+                // --- FACE ONLY ON HEAD ---
+                if (i === 0) {
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(renderX + 4, renderY + 4, 3, 3); 
+                    ctx.fillRect(renderX + 13, renderY + 4, 3, 3);
+                    ctx.fillRect(renderX + 6, renderY + 13, 8, 2); 
+                }
+            }
+
+            // Food
+            ctx.fillStyle = "#ff3366";
+            ctx.fillRect(food.x, food.y, box, box);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateLogic() {
+            // Correct Old Position Tracking
+            const oldPositions = snake.map(s => ({x: s.x, y: s.y}));
+
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+
+            if (d == "LEFT") snakeX -= box;
+            if (d == "UP") snakeY -= box;
+            if (d == "RIGHT") snakeX += box;
+            if (d == "DOWN") snakeY += box;
+
+            if (snakeX == food.x && snakeY == food.y) {
+                score++;
+                document.getElementById('score-board').innerText = "Score: " + score;
+                food = { x: Math.floor(Math.random() * 17 + 1) * box, y: Math.floor(Math.random() * 17 + 1) * box };
+            } else {
+                snake.pop();
+            }
+
+            let newHead = { x: snakeX, y: snakeY };
+            
+            if (snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
+                gameRunning = false;
+                handleGameOver();
+                return;
+            }
+            
+            snake.unshift(newHead);
+
+            // Sync oldX/oldY for smooth sliding
+            for(let i=0; i<snake.length; i++) {
+                if (oldPositions[i]) {
+                    snake[i].oldX = oldPositions[i].x;
+                    snake[i].oldY = oldPositions[i].y;
+                } else {
+                    snake[i].oldX = snake[i].x;
+                    snake[i].oldY = snake[i].y;
+                }
+            }
+        }
+
+        function collision(head, array) {
+            for (let i = 0; i < array.length; i++) {
+                if (head.x == array[i].x && head.y == array[i].y) return true;
+            }
+            return false;
+        }
+
+                function handleGameOver() {
+            
+            const go = document.getElementById("game-over");
+            go.style.display = "flex";
+            go.classList.add("animate-go");
+            document.getElementById("final-score").innerText = "Score: " + score;
+            
+            const msgEl = document.getElementById("high-score-msg");
+            
+            // 1. Local Storage Backup
+            const localBest = parseInt(localStorage.getItem('snake_highscore')) || 0;
+            if (score > localBest) {
+                localStorage.setItem('snake_highscore', score);
+            }
+
+            // 2. Firebase Syncing with Status
+            db.ref('users/' + playerName.toLowerCase()).once('value', snap => {
+                const cloudBest = snap.val()?.snake_highscore || 0;
+                
+                if (score > cloudBest) {
+                    msgEl.innerText = "Syncing score, please wait...";
+                    msgEl.style.color = "#f1c40f"; // Syncing status color
+
+                    db.ref('users/' + playerName.toLowerCase()).update({ 
+                        snake_highscore: score 
+                    }).then(() => {
+                        // Success Message
+                        msgEl.innerText = "Succesfully Synced! NEW HIGH SCORE! 🔥";
+                        msgEl.style.color = "#00ff88"; 
+                    }).catch(err => {
+                        // Network Error handling
+                        msgEl.innerText = "Sync Failed! (Saved Locally)";
+                        msgEl.style.color = "#ff3366";
+                        console.error("Firebase Error:", err);
+                    });
+                } else {
+                    // Show highest between Cloud and Local
+                    msgEl.innerText = "Best: " + Math.max(cloudBest, localBest);
+                    msgEl.style.color = "#00f3ff";
+                }
+            });
+        }
+
+
+        function resetGame() {
+          
+    // Game over screen ko chupao
+    document.getElementById("game-over").style.display = "none";
+    document.getElementById("game-over").classList.remove("animate-go");
+    
+    // Wapas Home Screen dikhao
+    document.getElementById("home-screen").style.display = "flex";
+    
+    // Game state ko reset karein taaki purana loop khatam ho jaye
+    if (typeof game !== 'undefined') clearInterval(game); 
+    d = null; // Direction reset
+}
+
+        updateSettingsUI();
+    </script>
+</body>
+</html>
