@@ -22,7 +22,8 @@
             --pacman: linear-gradient(45deg, #f1c40f, #e67e22);
             --flappy: linear-gradient(45deg, #3498db, #2980b9);
 	    --dino: linear-gradient(45deg, #3498db, skyblue);
-            --rps: linear-gradient(45deg, #e74c3c, #c0392b);
+--snake: linear-gradient(45deg, #2ecc71, #27ae60); /* Green theme for Snake */
+--rps: linear-gradient(45deg, #e74c3c, #c0392b);
             --car: linear-gradient(45deg, #ff00ff, #9900ff);
             --fair: linear-gradient(45deg, #2ecc71, #27ae60);
         }
@@ -348,6 +349,11 @@
     <span>🐦</span> Flappy Bird<br>(Leaderboard Game)
 </a>
       <a class="game-btn btn-dino" href="javascript:void(0)" onclick="loadPage('DinoGame/index.html')"><span>🦖</span> Dino Game<br>(Leaderboard Game)</a>
+				<div class="card" onclick="loadPage('Fair/snake.html')" style="background: var(--snake);">
+    <div class="card-icon">🐍</div>
+    <div class="card-title">Snake Game<br>(Leaderboard Game)</div>
+</div>
+
 			       	<a href="javascript:void(0)" onclick="loadPage('Pac-Man/Pac Man by html.html')" class="game-btn btn-pacman"><span>ᗧ</span> Pac-Man</a>
                 <a href="javascript:void(0)" onclick="loadPage('TicTacToe/Tic-Tac-Toe.html')" class="game-btn" style="background: linear-gradient(45deg, #00f3ff, #0099ff);"><span>❌⭕</span> Tic Tac Toe</a>
                 <a href="javascript:void(0)" onclick="loadPage('Rock files/RockPaperScissor Random.html')" class="game-btn" style="background: linear-gradient(45deg, #00a2ff, #d9ff00);"><span>🎲</span> RPS (Random)</a>
