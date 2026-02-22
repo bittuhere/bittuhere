@@ -3,9 +3,24 @@
 
 <head>
     <script>
-        // SECURITY CHECK
-        if (localStorage.getItem('isLoggedIn') !== 'true') {
+        // SECURITY CHECK & FIREBASE VERIFICATION
+        const storedName = localStorage.getItem('playerName');
+        
+        // Basic Local Check
+        if (localStorage.getItem('isLoggedIn') !== 'true' || !storedName) {
             window.location.href = '../LoginPlease/login.html';
+        } else {
+            // Extra Protection: Check if user actually exists in Firebase
+            const checkId = storedName.toLowerCase().trim();
+            db.ref('users/' + checkId).once('value', snap => {
+                if (!snap.exists()) {
+                    // Agar database mein user nahi mila (Banned ya Fake User)
+                    alert("Your access deined! Please re-login for access!");
+                    localStorage.removeItem('isLoggedIn');
+                    localStorage.removeItem('playerName');
+                    window.location.href = './LoginPlease/login.html';
+                }
+            });
         }
     </script>
     <meta charset="UTF-8">
@@ -220,4 +235,5 @@
 </body>
 
 </html>
+
 
