@@ -24,7 +24,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Leaderboard - Pro Fix</title>
+    <title>Snake Game | Arcade Hub</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
         body { margin: 0; background: #0f0c29; color: white; font-family: 'Teko', sans-serif; overflow: hidden; touch-action: none; display: flex; align-items: center; justify-content: center; height: 90vh;}
@@ -34,9 +34,20 @@
         h1 { font-size: 3rem; margin: 0; color: #00f3ff; line-height: 1; }
         .btn { background: #00f3ff; color: #000; border: none; padding: 10px 30px; font-family: 'Teko'; font-size: 1.5rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; }
         .settings-btn { position: absolute; top: 10px; right: 10px; background: none; border: 2px solid #00f3ff; color: #00f3ff; font-family: 'Teko'; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; }
+        /* Control Settings Button Style */
+        .ctrl-settings-btn { position: absolute; top: 10px; left: 10px; background: none; border: 2px solid #00f3ff; color: #00f3ff; font-family: 'Teko'; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; }
+
     
-        #controls { position: fixed; bottom: 30px; display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; }
-        .ctrl-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.1); border: 1px solid #00f3ff; color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        /* Buttons ab grid se bahar freely move kar sakte hain */
+        #controls { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+        .ctrl-btn { 
+            position: fixed; width: 65px; height: 65px; 
+            background: rgba(255,255,255,0.1); border: 1px solid #00f3ff; 
+            color: white; border-radius: 15px; display: flex; 
+            align-items: center; justify-content: center; font-size: 1.8rem; 
+            pointer-events: auto; touch-action: none;
+        }
+        .customizing .ctrl-btn { border: 2px dashed #00f3ff; background: rgba(0, 243, 255, 0.2); }
         #score-board { position: fixed; top: 20px; left: 20px; font-size: 2rem; color: #00f3ff; }
         @keyframes gameOver { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .animate-go { animation: gameOver 0.5s ease-out; }
@@ -48,11 +59,23 @@
 
     <div id="game-container">
         <canvas id="snakeGame" width="360" height="360"></canvas>
-        <div id="home-screen" class="overlay">
+                <div id="home-screen" class="overlay">
             <h1>Snake Game</h1>
             <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+            <button class="ctrl-settings-btn" onclick="toggleCtrlSettings()">🎮</button>
+            <p>Ready to break the record?</p>
             <button class="btn" onclick="startGame()">START GAME</button>
         </div>
+
+        <div id="ctrl-custom-screen" class="overlay" style="display: none;">
+            <h1>CUSTOM CONTROLS</h1>
+            <p style="color:#00f3ff;">Drag the buttons below to your comfort!</p>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button class="btn" onclick="resetControls()">RESET</button>
+                <button class="btn" style="background:red; color:white;" onclick="toggleCtrlSettings()">CLOSE</button>
+            </div>
+        </div>
+
         <div id="settings-screen" class="overlay" style="display: none;">
             <h1>SETTINGS</h1>
             <button class="btn" id="blocky-btn" onclick="setMode('blocky')">BLOCKY (Classic)</button>
@@ -69,12 +92,13 @@
         </div>
     </div>
 
-    <div id="controls">
-        <div></div><button class="ctrl-btn" onclick="changeDir('UP')">▲</button><div></div>
-        <button class="ctrl-btn" onclick="changeDir('LEFT')">◀</button>
-        <button class="ctrl-btn" onclick="changeDir('DOWN')">▼</button>
-        <button class="ctrl-btn" onclick="changeDir('RIGHT')">▶</button>
+        <div id="controls">
+        <button id="btn-up" class="ctrl-btn" onclick="changeDir('UP')" style="bottom: 90px; left: 50%; transform: translateX(-50%);">▲</button>
+        <button id="btn-left" class="ctrl-btn" onclick="changeDir('LEFT')" style="bottom: 20px; left: calc(50% - 109px);">◀</button>
+        <button id="btn-down" class="ctrl-btn" onclick="changeDir('DOWN')" style="bottom: 20px; left: 50%; transform: translateX(-50%);">▼</button>
+        <button id="btn-right" class="ctrl-btn" onclick="changeDir('RIGHT')" style="bottom: 20px; left: calc(50% + 44px);">▶</button>
     </div>
+
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -93,7 +117,17 @@
         const db = firebase.database();
         const playerName = localStorage.getItem('playerName') || "Guest";
     
+        // Load Saved Control Positions
+        const controls = document.getElementById('controls');
+        const savedPos = JSON.parse(localStorage.getItem('snake_controls_pos'));
+        if (savedPos) {
+            controls.style.left = savedPos.left;
+            controls.style.top = savedPos.top;
+            controls.style.bottom = 'auto';
+        }
+
         const canvas = document.getElementById("snakeGame");
+
         const ctx = canvas.getContext("2d");
         const box = 20;
         let snake, food, d, score, gameRunning = false;
@@ -294,7 +328,73 @@
     d = null; // Direction reset
 }
 
-        updateSettingsUI();
+                        updateSettingsUI();
+
+        // --- ADVANCED INDIVIDUAL CUSTOM CONTROLS ---
+        let isCustomizing = false;
+        const controlButtons = document.querySelectorAll('.ctrl-btn');
+
+        // Saved positions load karein
+        function loadButtonPositions() {
+            controlButtons.forEach(btn => {
+                const pos = JSON.parse(localStorage.getItem('pos_' + btn.id));
+                if (pos) {
+                    btn.style.left = pos.left;
+                    btn.style.bottom = pos.bottom;
+                    btn.style.transform = 'none'; // Custom pos par transform hata dein
+                }
+            });
+        }
+        loadButtonPositions();
+
+        function toggleCtrlSettings() {
+            isCustomizing = !isCustomizing;
+            const screen = document.getElementById('ctrl-custom-screen');
+            screen.style.display = isCustomizing ? 'flex' : 'none';
+            document.getElementById('controls').classList.toggle('customizing', isCustomizing);
+        }
+
+        function resetControls() {
+            if(confirm("Reset all buttons to default?")) {
+                controlButtons.forEach(btn => localStorage.removeItem('pos_' + btn.id));
+                location.reload();
+            }
+        }
+
+        // Individual Button Dragging Logic
+        controlButtons.forEach(btn => {
+            let activeDrag = false;
+
+            btn.addEventListener("touchstart", (e) => {
+                if (!isCustomizing) return;
+                activeDrag = true;
+                btn.style.opacity = "0.7";
+            }, {passive: false});
+
+            window.addEventListener("touchmove", (e) => {
+                if (!activeDrag || !isCustomizing) return;
+                e.preventDefault();
+                let touch = e.touches[0];
+                
+                // Position update (Screen ke hisab se)
+                btn.style.left = (touch.clientX - btn.offsetWidth / 2) + "px";
+                btn.style.bottom = (window.innerHeight - touch.clientY - btn.offsetHeight / 2) + "px";
+                btn.style.transform = "none";
+            }, {passive: false});
+
+            window.addEventListener("touchend", () => {
+                if (!activeDrag) return;
+                activeDrag = false;
+                btn.style.opacity = "1";
+                
+                // Position save karein
+                localStorage.setItem('pos_' + btn.id, JSON.stringify({
+                    left: btn.style.left,
+                    bottom: btn.style.bottom
+                }));
+            });
+        });
+
         // PC Friendly Controls (Arrow Keys & WASD)
         document.addEventListener("keydown", e => {
             const key = e.key.toLowerCase();
