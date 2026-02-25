@@ -328,11 +328,14 @@
         </div>
 
         <div id="study-section" class="hidden">
-            <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
-            <div class="menu-grid">
-                <a href="javascript:void(0)" onclick="loadPage('Fair/Fair.html')" class="game-btn btn-fair full-width"><span>📝</span> Fair Copies</a>
-            </div>
-        </div>
+    <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
+    <div class="game-list-grid"> <a href="javascript:void(0)" onclick="loadPage('Fair/Fair.html')" class="game-btn btn-fair"><span>📝</span> Fair Copies</a>
+        
+        <a href="javascript:void(0)" onclick="openExternal('https://drive.google.com/drive/folders/1KZU6Rb1B59zPtJ-eX7tsFM4d-MZAxjjN')" class="game-btn" style="background: var(--study);">
+            <span>📁</span> Drive Notes
+        </a>
+    </div>
+		</div>
 
         <div id="multi-section" class="hidden">
             <button onclick="goBack()" class="back-btn">⬅ Back to Menu</button>
@@ -614,6 +617,19 @@ function loadPage(url) {
     setTimeout(() => {
         window.location.href = url;
     }, 500);
+}
+function openExternal(url) {
+    const overlay = document.getElementById('loading-overlay');
+    if(overlay) {
+        overlay.style.display = 'flex';
+        // 0.6s ka feel taaki lage link process ho rahi hai
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            window.open(url, '_blank'); // New tab mein kholne ke liye
+        }, 600);
+    } else {
+        window.open(url, '_blank');
+    }
 }
 
     </script>
