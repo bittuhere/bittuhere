@@ -40,14 +40,29 @@
     
         /* Buttons ab grid se bahar freely move kar sakte hain */
         #controls { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+        /* Buttons look and isolated transitions */
         .ctrl-btn { 
             position: fixed; width: 65px; height: 65px; 
             background: rgba(255,255,255,0.1); border: 1px solid #00f3ff; 
             color: white; border-radius: 15px; display: flex; 
             align-items: center; justify-content: center; font-size: 1.8rem; 
             pointer-events: auto; touch-action: none;
+            /* Only animate colors, NOT position (important for dragging) */
+            transition: background 0.1s, box-shadow 0.1s, border-color 0.1s; 
         }
-        .customizing .ctrl-btn { border: 2px dashed #00f3ff; background: rgba(0, 243, 255, 0.2); }
+
+        /* Click Effect: Only triggers when NOT in customizing mode */
+        #controls:not(.customizing) .ctrl-btn:active {
+            background: rgba(0, 243, 255, 0.5) !important;
+            box-shadow: 0 0 15px #00f3ff, inset 0 0 10px #00f3ff;
+            border-color: #ffffff !important;
+        }
+
+        .customizing .ctrl-btn { 
+            border: 2px dashed #00f3ff; 
+            background: rgba(0, 243, 255, 0.2); 
+            transition: none !important; /* Dragging ke waqt transition band */
+        }
         #score-board { position: fixed; top: 20px; left: 20px; font-size: 2rem; color: #00f3ff; }
         @keyframes gameOver { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .animate-go { animation: gameOver 0.5s ease-out; }
@@ -368,7 +383,7 @@
             btn.addEventListener("touchstart", (e) => {
                 if (!isCustomizing) return;
                 activeDrag = true;
-                btn.style.opacity = "0.7";
+                btn.style.opacity = "0.6"; // Dragging visual feedback
             }, {passive: false});
 
             window.addEventListener("touchmove", (e) => {
