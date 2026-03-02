@@ -387,7 +387,27 @@
 
         <div class="controls">
             <button onclick="logout()" class="logout-btn">Logout</button>
+            <button onclick="openChangePass()" class="logout-btn" style="border-color:#00f3ff; color:#00f3ff; margin-left:10px;">Change Password</button>
         </div>
+
+        <script>
+        function openChangePass() {
+            const oldPass = prompt("Enter OLD password:");
+            if(!oldPass) return;
+            const uid = localStorage.getItem('playerName').toLowerCase().trim();
+            db.ref('users/' + uid).once('value', snap => {
+                if(snap.val().password === oldPass) {
+                    const newPass = prompt("Enter NEW password (min 4 chars):");
+                    if(newPass && newPass.length >= 4) {
+                        db.ref('users/' + uid).update({ password: newPass }).then(() => {
+                            alert("Success! Re-login required.");
+                            logout();
+                        });
+                    } else { alert("Invalid new password!"); }
+                } else { alert("Wrong old password!"); }
+            });
+        }
+        </script>
     </div>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -548,10 +568,11 @@ checkNotifications();
         } else {
             // Extra Protection: Check if user actually exists in Firebase
             const checkId = storedName.toLowerCase().trim();
-            db.ref('users/' + checkId).once('value', snap => {
-                if (!snap.exists()) {
-                    // Agar database mein user nahi mila (Banned ya Fake User)
-                    alert("Your access deined! Please re-login for access!");
+            // Live Security Watch
+            db.ref('users/' + checkId).on('value', snap => {
+                const userData = snap.val();
+                if (!snap.exists() || (userData && userData.blocked === true)) {
+                    alert(userData && userData.blocked ? "Your account is BLOCKED by Admin!" : "Access Denied!");
                     localStorage.removeItem('isLoggedIn');
                     localStorage.removeItem('playerName');
                     window.location.href = 'LoginPlease/login.html';
