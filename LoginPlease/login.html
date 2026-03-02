@@ -172,7 +172,12 @@
         <p id="sub-text">Enter the Arcade World</p>
 
         <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
+                <div class="input-group" style="position: relative;">
+                    <input type="password" id="password" placeholder="Password">
+                    <span id="eye-btn" onclick="togglePass()" style="position:absolute; right:15px; top:13px; cursor:pointer; z-index:10;">
+                        <img id="eye-icon" src="eyeopen.png" style="width:25px; height:auto; filter: drop-shadow(0 0 5px var(--neon-blue));">
+                    </span>
+                </div>
 
         <div class="loader" id="loader"></div>
         <div class="status-msg" id="status"></div>
@@ -224,7 +229,21 @@
             }
         }
 
+                // Image source toggle logic
+        function togglePass() {
+            const p = document.getElementById('password');
+            const icon = document.getElementById('eye-icon');
+            if(p.type === "password") { 
+                p.type = "text"; 
+                icon.src = "eyeclosed.png"; // Hide ke liye image
+            } else { 
+                p.type = "password"; 
+                icon.src = "eyeopen.png"; // Show ke liye image
+            }
+        }
+
         function processAuth() {
+
             const user = document.getElementById('username').value.trim().toLowerCase();
             const pass = document.getElementById('password').value;
             const status = document.getElementById('status');
