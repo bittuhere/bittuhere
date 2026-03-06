@@ -1,13 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>
-        // SECURITY CHECK
-        // If user is not logged in, kick them to login.html
-        if (localStorage.getItem('isLoggedIn') !== 'true') {
-            window.location.href = '../LoginPlease/login.html';
-        }
-    </script>
     <meta charset="UTF-8">
     <title>Pac-Man</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -56,12 +49,12 @@
             color:  #CFFF04;
             line-height: 1;
         }
-    h2 {
-        font-size: 3rem;
+        h2 {
+            font-size: 3rem;
             margin: 0;
             color:  #CFFF04;
             line-height: 1;
-    }
+        }
         .btn {
             background:  #CFFF04;
             color: black;
@@ -132,422 +125,497 @@
             background: rgba(0, 243, 255, 0.2);
             transition: none !important;
         }
-        @keyframes gameOver { 
-            from { transform: scale(0.5); opacity: 0; } 
-            to { transform: scale(1); opacity: 1; } 
+        @keyframes gameOver {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
         .animate-go { animation: gameOver 0.5s ease-out; }
     </style>
-    
 </head>
 <body>
-    
 
-    <div id="game-container">
-        <h2 style="z-index: 40;">Score: <span id="span">0</span></h2>
-        <canvas id="board"></canvas>
-        
-        <div id="home-screen" class="overlay">
-            <h1>Pac-Man</h1>
-            <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
-            <button class="ctrl-settings-btn" onclick="toggleCtrlSettings()">🎮</button>
-            <p>Ready to play Pac-Man!</p>
-            <button class="btn" onclick="startGame()">START GAME</button>
-        </div>
+<div id="game-container">
+    <h2 style="z-index: 40;">Score: <span id="span">0</span></h2>
+    <canvas id="board"></canvas>
 
-        <div id="ctrl-custom-screen" class="overlay" style="display: none;">
-            <h1 style="color: #ffff;">CUSTOM CONTROLS</h1>
-            <p style="color: #CFFF04;">Drag the buttons below to your comfort!</p>
-            <div style="display: flex; gap: 15px; margin-top: 20px;">
-                <button class="btn" onclick="resetControls()">RESET</button>
-                <button class="btn" style="background:red; color:white;" onclick="toggleCtrlSettings()">CLOSE</button>
-            </div>
-        </div>
+    <div id="home-screen" class="overlay">
+        <h1>Pac-Man</h1>
+        <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+        <button class="ctrl-settings-btn" onclick="toggleCtrlSettings()">🎮</button>
+        <p>Ready to play Pac-Man!</p>
+        <button class="btn" onclick="startGame()">START GAME</button>
+    </div>
 
-        <div id="settings-screen" class="overlay" style="display: none;">
-            <h1>SETTINGS</h1>
-            <p>No settings available.</p>
-            <button class="btn" style="background:none; color:white; border:1px solid white;" onclick="toggleSettings()">BACK</button>
-        </div>
-
-        <div id="game-over" class="overlay" style="display: none;">
-            <h1 style="color: #ff3366;">GAME OVER</h1>
-            <p id="final-score">Score: 0</p>
-            <p id="high-score-msg" style="color: #00ff88;"></p>
-            <button class="btn" style="background:none; color:#dbad04; border:1px solid #dbad04;"
-                onclick="window.location.href='../Leaderboard/leaderboard.html'">RANK</button>
-            <button class="btn" style="background:none; color: #CFFF04; border:1px solid  #CFFF04;"
-                onclick="window.location.href='../index.html'">HOME</button>
-            <button class="btn" onclick="resetGame()">RETRY</button>
+    <div id="ctrl-custom-screen" class="overlay" style="display: none;">
+        <h1 style="color: #ffff;">CUSTOM CONTROLS</h1>
+        <p style="color: #CFFF04;">Drag the buttons below to your comfort!</p>
+        <div style="display: flex; gap: 15px; margin-top: 20px;">
+            <button class="btn" onclick="resetControls()">RESET</button>
+            <button class="btn" style="background:red; color:white;" onclick="toggleCtrlSettings()">CLOSE</button>
         </div>
     </div>
 
-    <div id="controls">
-        <button id="btn-up" class="ctrl-btn" onclick="changeDir('UP')" 
-            style="bottom: 90px; left: 50%; transform: translateX(-50%);">▲</button>
-        <button id="btn-left" class="ctrl-btn" onclick="changeDir('LEFT')" 
-            style="bottom: 20px; left: calc(50% - 109px);">◀</button>
-        <button id="btn-down" class="ctrl-btn" onclick="changeDir('DOWN')" 
-            style="bottom: 20px; left: 50%; transform: translateX(-50%);">▼</button>
-        <button id="btn-right" class="ctrl-btn" onclick="changeDir('RIGHT')" 
-            style="bottom: 20px; left: calc(50% + 44px);">▶</button>
+    <div id="settings-screen" class="overlay" style="display: none;">
+        <h1>SETTINGS</h1>
+        <p>No settings available.</p>
+        <button class="btn" style="background:none; color:white; border:1px solid white;" onclick="toggleSettings()">BACK</button>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <div id="game-over" class="overlay" style="display: none;">
+        <h1 style="color: #ff3366;">GAME OVER</h1>
+        <p id="final-score">Score: 0</p>
+        <p id="high-score-msg" style="color: #00ff88;"></p>
+        <button class="btn" style="background:none; color:#dbad04; border:1px solid #dbad04;"
+            onclick="window.location.href='../Leaderboard/leaderboard.html'">RANK</button>
+        <button class="btn" style="background:none; color: #CFFF04; border:1px solid  #CFFF04;"
+            onclick="window.location.href='../index.html'">HOME</button>
+        <button class="btn" onclick="resetGame()">RETRY</button>
+    </div>
+</div>
 
-    <script>
-        // Firebase config (same as snake)
-        const firebaseConfig = {
-            apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
-            authDomain: "formywebfirebase.firebaseapp.com",
-            databaseURL: "https://formywebfirebase-default-rtdb.firebaseio.com",
-            projectId: "formywebfirebase",
-            storageBucket: "formywebfirebase.firebasestorage.app",
-            messagingSenderId: "451953941862",
-            appId: "1:451953941862:web:b5f8394f99e17b232f3ca7"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const playerName = localStorage.getItem('playerName') || "Guest";
+<div id="controls">
+    <button id="btn-up" class="ctrl-btn" onclick="changeDir('UP')"
+        style="bottom: 90px; left: 50%; transform: translateX(-50%);">▲</button>
+    <button id="btn-left" class="ctrl-btn" onclick="changeDir('LEFT')"
+        style="bottom: 20px; left: calc(50% - 109px);">◀</button>
+    <button id="btn-down" class="ctrl-btn" onclick="changeDir('DOWN')"
+        style="bottom: 20px; left: 50%; transform: translateX(-50%);">▼</button>
+    <button id="btn-right" class="ctrl-btn" onclick="changeDir('RIGHT')"
+        style="bottom: 20px; left: calc(50% + 44px);">▶</button>
+</div>
 
-        // Game variables
-        let board, context;
-        const rowCount = 21, columnCount = 19, tileSize = 32;
-        const boardWidth = columnCount * tileSize, boardHeight = rowCount * tileSize;
-        let walls = new Set(), foods = new Set(), ghosts = new Set();
-        let pacman;
-        const directions = ['U','D','L','R'];
-        let score = 0, lives = 1, gameOver = false;
-        let spanScore = document.getElementById("span");
-   /*  // Select the elements
-  const slider = document.getElementById("myPercent");
-  const output = document.getElementById("display");
-    let currentPercent;
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-  // Update the display in real-time as you drag
-  slider.oninput = function() {
-    output.textContent = this.value + "%";
-    currentPercent = slider.value;
-  };*/
-        
+<script>
+    // Firebase config (same as snake)
+    const firebaseConfig = {
+        apiKey: "AIzaSyDCxIwIqiYc2FxT8qq1fbAsm2ym5DaFmsw",
+        authDomain: "formywebfirebase.firebaseapp.com",
+        databaseURL: "https://formywebfirebase-default-rtdb.firebaseio.com",
+        projectId: "formywebfirebase",
+        storageBucket: "formywebfirebase.firebasestorage.app",
+        messagingSenderId: "451953941862",
+        appId: "1:451953941862:web:b5f8394f99e17b232f3ca7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const playerName = localStorage.getItem('playerName') || "Guest";
 
-        // Setup canvas and load images on window load
-        window.onload = function() {
-            board = document.getElementById("board");
-            board.width = boardWidth;
-            board.height = boardHeight;
-            context = board.getContext("2d");
-            loadImages();
-        }
+    // Game variables
+    let board, context;
+    const rowCount = 21, columnCount = 19, tileSize = 32;
+    const boardWidth = columnCount * tileSize, boardHeight = rowCount * tileSize;
+    let walls = new Set(), foods = new Set(), ghosts = new Set();
+    let pacman;
+    const directions = ['U','D','L','R'];
 
-        function loadImages() {
-            wallImage = new Image(); wallImage.src = "./Wall Img.png";
-            blueGhostImage = new Image(); blueGhostImage.src = "./Blue Ghost.png";
-            orangeGhostImage = new Image(); orangeGhostImage.src = "./Orange Ghost.png";
-            pinkGhostImage = new Image(); pinkGhostImage.src = "./Pink Ghost.png";
-            redGhostImage = new Image(); redGhostImage.src = "./Red Ghost.png";
-            pacmanUpImage = new Image(); pacmanUpImage.src = "./Pacman Up.png";
-            pacmanDownImage = new Image(); pacmanDownImage.src = "./Pacman Down.png";
-            pacmanLeftImage = new Image(); pacmanLeftImage.src = "./Pacman Left.png";
-            pacmanRightImage = new Image(); pacmanRightImage.src = "./Pacman Right.png";
-            pacmanEatImage = new Image(); pacmanEatImage.src = "./Pac Man Eated.png";
-        }
+    // state
+    let score = 0, lives = 1, gameOver = false;
+    let gameRunning = false; // prevents input & duplicate loops
+    let spanScore = null;
 
-        const tileMap = [
-            "XXXXXXXXXXXXXXXXXXX",
-            "X        X        X",
-            "X XX XXX X XXX XX X",
-            "X                 X",
-            "X XX X XXXXX X XX X",
-            "X    X       X    X",
-            "XXXX XXXX XXXX XXXX",
-            "OOOX X       X XOOO",
-            "XXXX X XXrXX X XXXX",
-            "O       bpo       O",
-            "XXXX X XXXXX X XXXX",
-            "OOOX X       X XOOO",
-            "XXXX X XXXXX X XXXX",
-            "X        X        X",
-            "X XX XXX X XXX XX X",
-            "X  X     P     X  X",
-            "XX X X XXXXX X X XX",
-            "X    X   X   X    X",
-            "X XXXXXX X XXXXXX X",
-            "X                 X",
-            "XXXXXXXXXXXXXXXXXXX"
-        ];
+    // image variables (declare here)
+    let wallImage, blueGhostImage, orangeGhostImage, pinkGhostImage, redGhostImage;
+    let pacmanUpImage, pacmanDownImage, pacmanLeftImage, pacmanRightImage, pacmanEatImage;
 
-        class Block {
-            constructor(image, x, y, width, height) {
-                this.image = image;
-                this.x = x; this.y = y;
-                this.width = width; this.height = height;
-                this.startX = x; this.startY = y;
-                this.direction = 'R';
-                this.velocityX = 0; this.velocityY = 0;
-            }
-            updateDirection(direction) {
-                const prevDir = this.direction;
-                this.direction = direction;
+    // Setup canvas and load images on window load
+    window.onload = function() {
+        spanScore = document.getElementById("span");
+        board = document.getElementById("board");
+        board.width = boardWidth;
+        board.height = boardHeight;
+        context = board.getContext("2d");
+        loadImages();
+
+        // load control button positions AFTER DOM ready
+        loadButtonPositions();
+
+        // draw initial frame so user can see the map area
+        // loadMap will assign pacman and ghosts once images are present
+        loadMap();
+        resetPositions();
+        draw();
+    };
+
+    function loadImages() {
+        wallImage = new Image(); wallImage.src = "./Wall Img.png";
+        blueGhostImage = new Image(); blueGhostImage.src = "./Blue Ghost.png";
+        orangeGhostImage = new Image(); orangeGhostImage.src = "./Orange Ghost.png";
+        pinkGhostImage = new Image(); pinkGhostImage.src = "./Pink Ghost.png";
+        redGhostImage = new Image(); redGhostImage.src = "./Red Ghost.png";
+        pacmanUpImage = new Image(); pacmanUpImage.src = "./Pacman Up.png";
+        pacmanDownImage = new Image(); pacmanDownImage.src = "./Pacman Down.png";
+        pacmanLeftImage = new Image(); pacmanLeftImage.src = "./Pacman Left.png";
+        pacmanRightImage = new Image(); pacmanRightImage.src = "./Pacman Right.png";
+        pacmanEatImage = new Image(); pacmanEatImage.src = "./Pac Man Eated.png";
+    }
+
+    const tileMap = [
+        "XXXXXXXXXXXXXXXXXXX",
+        "X        X        X",
+        "X XX XXX X XXX XX X",
+        "X                 X",
+        "X XX X XXXXX X XX X",
+        "X    X       X    X",
+        "XXXX XXXX XXXX XXXX",
+        "OOOX X       X XOOO",
+        "XXXX X XXrXX X XXXX",
+        "O       bpo       O",
+        "XXXX X XXXXX X XXXX",
+        "OOOX X       X XOOO",
+        "XXXX X XXXXX X XXXX",
+        "X        X        X",
+        "X XX XXX X XXX XX X",
+        "X  X     P     X  X",
+        "XX X X XXXXX X X XX",
+        "X    X   X   X    X",
+        "X XXXXXX X XXXXXX X",
+        "X                 X",
+        "XXXXXXXXXXXXXXXXXXX"
+    ];
+
+    class Block {
+    constructor(image, x, y, width, height) {
+        this.image = image;
+        this.x = x; this.y = y;
+        this.width = width; this.height = height;
+        this.startX = x; this.startY = y;
+        this.direction = 'R';
+        this.velocityX = 0; this.velocityY = 0;
+        this.nextDirection = null; // queued direction if current can't be applied now
+    }
+    // Tries to change direction. Returns true if direction accepted, false if rejected (collision).
+    updateDirection(direction) {
+        const prevDir = this.direction;
+        this.direction = direction;
+        this.updateVelocity();
+
+        // tentative move by one velocity step to test collision
+        this.x += this.velocityX;
+        this.y += this.velocityY;
+
+        for (let wall of walls) {
+            if (collision(this, wall)) {
+                // undo and revert
+                this.x -= this.velocityX;
+                this.y -= this.velocityY;
+                this.direction = prevDir;
                 this.updateVelocity();
-                this.x += this.velocityX;
-                this.y += this.velocityY;
-                for (let wall of walls) {
-                    if (collision(this, wall)) {
-                        this.x -= this.velocityX;
-                        this.y -= this.velocityY;
-                        this.direction = prevDir;
-                        this.updateVelocity();
-                        return;
-                    }
+                return false;
+            }
+        }
+
+        // accepted (positions already advanced one step — that's fine)
+        return true;
+    }
+    updateVelocity() {
+        if (this.direction == 'U') { this.velocityX = 0; this.velocityY = -tileSize/4; }
+        else if (this.direction == 'D') { this.velocityX = 0; this.velocityY = tileSize/4; }
+        else if (this.direction == 'L') { this.velocityX = -tileSize/4; this.velocityY = 0; }
+        else if (this.direction == 'R') { this.velocityX = tileSize/4; this.velocityY = 0; }
+    }
+    reset() {
+        this.x = this.startX;
+        this.y = this.startY;
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.direction = 'R';
+        this.nextDirection = null;
+    }
+}
+
+    function loadMap() {
+        walls.clear(); foods.clear(); ghosts.clear();
+        for (let r = 0; r < rowCount; r++) {
+            for (let c = 0; c < columnCount; c++) {
+                const tileChar = tileMap[r][c];
+                const x = c * tileSize, y = r * tileSize;
+                if (tileChar == 'X') {
+                    const wall = new Block(wallImage, x, y, tileSize, tileSize);
+                    walls.add(wall);
+                } else if (tileChar == 'b') {
+                    const g = new Block(blueGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(g);
+                } else if (tileChar == 'o') {
+                    const g = new Block(orangeGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(g);
+                } else if (tileChar == 'p') {
+                    const g = new Block(pinkGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(g);
+                } else if (tileChar == 'r') {
+                    const g = new Block(redGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(g);
+                } else if (tileChar == 'P') {
+                    pacman = new Block(pacmanRightImage, x, y, tileSize, tileSize);
+                } else if (tileChar == ' ') {
+                    const food = new Block(null, x+14, y+14, 4, 4);
+                    foods.add(food);
                 }
             }
-            updateVelocity() {
-                if (this.direction == 'U') { this.velocityX = 0; this.velocityY = -tileSize/4; }
-                else if (this.direction == 'D') { this.velocityX = 0; this.velocityY = tileSize/4; }
-                else if (this.direction == 'L') { this.velocityX = -tileSize/4; this.velocityY = 0; }
-                else if (this.direction == 'R') { this.velocityX = tileSize/4; this.velocityY = 0; }
-            }
-            reset() {
-                this.x = this.startX;
-                this.y = this.startY;
+        }
+    }
+
+    function update() {
+        if (!gameRunning) return;   // stop duplicate loops / unwanted runs
+        if (gameOver) return;
+        move();
+        draw();
+        setTimeout(update, 50); // 20 FPS
+    }
+
+    function draw() {
+        if (!context) return;
+        context.clearRect(0, 0, board.width, board.height);
+
+        if (pacman && pacman.image) {
+            try { context.drawImage(pacman.image, pacman.x, pacman.y, pacman.width, pacman.height); } catch (e) {}
+        }
+
+        for (let ghost of ghosts) {
+            if (ghost.image) {
+                try { context.drawImage(ghost.image, ghost.x, ghost.y, ghost.width, ghost.height); } catch (e) {}
             }
         }
 
-        function loadMap() {
-            walls.clear(); foods.clear(); ghosts.clear();
-            for (let r = 0; r < rowCount; r++) {
-                for (let c = 0; c < columnCount; c++) {
-                    const tileChar = tileMap[r][c];
-                    const x = c * tileSize, y = r * tileSize;
-                    if (tileChar == 'X') {
-                        const wall = new Block(wallImage, x, y, tileSize, tileSize);
-                        walls.add(wall);
-                    } else if (tileChar == 'b') {
-                        ghosts.add(new Block(blueGhostImage, x, y, tileSize, tileSize));
-                    } else if (tileChar == 'o') {
-                        ghosts.add(new Block(orangeGhostImage, x, y, tileSize, tileSize));
-                    } else if (tileChar == 'p') {
-                        ghosts.add(new Block(pinkGhostImage, x, y, tileSize, tileSize));
-                    } else if (tileChar == 'r') {
-                        ghosts.add(new Block(redGhostImage, x, y, tileSize, tileSize));
-                    } else if (tileChar == 'P') {
-                        pacman = new Block(pacmanRightImage, x, y, tileSize, tileSize);
-                    } else if (tileChar == ' ') {
-                        const food = new Block(null, x+14, y+14, 4, 4);
-                        foods.add(food);
-                    }
-                }
+        for (let wall of walls) {
+            if (wall.image) {
+                try { context.drawImage(wall.image, wall.x, wall.y, wall.width, wall.height); } catch (e) {}
             }
         }
 
-        function update() {
-            if (gameOver) return;
-            move();
-            draw();
-            setTimeout(update, 50); //1000/50=20 Fps
+        context.fillStyle = "white";
+        for (let food of foods) {
+            context.fillRect(food.x, food.y, food.width, food.height);
         }
 
-        function draw() {
-            context.clearRect(0, 0, board.width, board.height);
-            context.drawImage(pacman.image, pacman.x, pacman.y, pacman.width, pacman.height);
-            for (let ghost of ghosts) {
-                context.drawImage(ghost.image, ghost.x, ghost.y, ghost.width, ghost.height);
+        if (spanScore) spanScore.innerText = score;
+    }
+
+    function move() {
+    if (!pacman) return;
+
+    // If a nextDirection is queued and Pac-Man is approximately aligned to the tile grid,
+    // try to apply the queued direction now.
+    if (pacman.nextDirection) {
+        const alignedX = Math.abs((pacman.x % tileSize)) < 1 || Math.abs((pacman.x % tileSize) - tileSize) < 1;
+        const alignedY = Math.abs((pacman.y % tileSize)) < 1 || Math.abs((pacman.y % tileSize) - tileSize) < 1;
+        // require roughly tile-alignment (either axis) — for Pac-Man grid movement you'll want both axes aligned
+        if (alignedX && alignedY) {
+            const ok = pacman.updateDirection(pacman.nextDirection);
+            if (ok) {
+                // direction accepted — update image and clear queued direction
+                if (pacman.direction === 'U') pacman.image = pacmanUpImage || pacman.image;
+                else if (pacman.direction === 'D') pacman.image = pacmanDownImage || pacman.image;
+                else if (pacman.direction === 'L') pacman.image = pacmanLeftImage || pacman.image;
+                else if (pacman.direction === 'R') pacman.image = pacmanRightImage || pacman.image;
+                pacman.nextDirection = null;
             }
-            for (let wall of walls) {
-                context.drawImage(wall.image, wall.x, wall.y, wall.width, wall.height);
-            }
-            context.fillStyle = "white";
-            for (let food of foods) {
-                context.fillRect(food.x, food.y, food.width, food.height);
-            }
-            /*context.fillStyle = "white";
-            context.font = "30px sans-serif";
-            context.fillText("Score:" + score, tileSize/2, tileSize/1.3);*/
-            spanScore.innerText = score;
+            // if not ok, keep it queued
         }
+    }
 
-        function move() {
-            pacman.x += pacman.velocityX;
-            pacman.y += pacman.velocityY;
-            // wall collision
-            for (let wall of walls) {
-                if (collision(pacman, wall)) {
-                    pacman.x -= pacman.velocityX;
-                    pacman.y -= pacman.velocityY;
-                    break;
-                }
-            }
-            // ghost collision
-            for (let ghost of ghosts) {
-                if (collision(ghost, pacman)) {
-                    lives--;
-                    if (lives == 0) { gameOver = true; showGameOver(); return; }
-                    resetPositions();
-                }
-                if (ghost.y == tileSize*9 && ghost.direction != 'U' && ghost.direction != 'D') {
-                    ghost.updateDirection('U');
-                }
-                ghost.x += ghost.velocityX;
-                ghost.y += ghost.velocityY;
-                for (let wall of walls) {
-                    if (collision(ghost, wall) || ghost.x <= 0 || ghost.x + ghost.width >= boardWidth) {
-                        ghost.x -= ghost.velocityX;
-                        ghost.y -= ghost.velocityY;
-                        const newDir = directions[Math.floor(Math.random()*4)];
-                        ghost.updateDirection(newDir);
-                    }
-                }
-            }
-            // food collision
-            let eaten = null;
-            for (let food of foods) {
-                if (collision(pacman, food)) {
-                    eaten = food;
-                    score += 10;
-                    break;
-                }
-            }
-            foods.delete(eaten);
-            // next level
-            if (foods.size == 0) {
-                loadMap();
-                resetPositions();
-            }
+    // Now do normal movement
+    pacman.x += pacman.velocityX;
+    pacman.y += pacman.velocityY;
+
+    // wall collision for pacman
+    for (let wall of walls) {
+        if (collision(pacman, wall)) {
+            pacman.x -= pacman.velocityX;
+            pacman.y -= pacman.velocityY;
+            break;
         }
+    }
 
-        function collision(a, b) {
-            return a.x < b.x + b.width &&
-                   a.x + a.width > b.x &&
-                   a.y < b.y + b.height &&
-                   a.y + a.height > b.y;
-        }
-
-        function resetPositions() {
-            pacman.reset();
-            pacman.velocityX = 0;
-            pacman.velocityY = 0;
-            for (let ghost of ghosts) {
-                ghost.reset();
-            }
-        }
-
-        function changeDir(dir) {
-            if (dir == "UP") {
-                pacman.updateDirection('U');
-                pacman.image = pacmanUpImage;
-            } else if (dir == "DOWN") {
-                pacman.updateDirection('D');
-                pacman.image = pacmanDownImage;
-            } else if (dir == "LEFT") {
-                pacman.updateDirection('L');
-                pacman.image = pacmanLeftImage;
-            } else if (dir == "RIGHT") {
-                pacman.updateDirection('R');
-                pacman.image = pacmanRightImage;
-            }
-            
-        }
-
-        document.addEventListener("keydown", (e) => {
-            const key = e.key.toLowerCase();
-            if (key === "arrowleft" || key === "a") changeDir("LEFT");
-            else if (key === "arrowup" || key === "w") changeDir("UP");
-            else if (key === "arrowright" || key === "d") changeDir("RIGHT");
-            else if (key === "arrowdown" || key === "s") changeDir("DOWN");
-        });
-
-        function startGame() {
-            document.getElementById("home-screen").style.display = "none";
-            document.getElementById("settings-screen").style.display = "none";
-            score = 0;
-            lives = 1;
-            gameOver = false;
-            loadMap();
+    // ghost collision and movement (unchanged)
+    for (let ghost of ghosts) {
+        if (collision(ghost, pacman)) {
+            lives--;
+            if (lives == 0) { gameOver = true; showGameOver(); return; }
             resetPositions();
-            for (let ghost of ghosts) {
+        }
+
+        if (Math.abs(ghost.y - tileSize*9) < 1 && ghost.direction != 'U' && ghost.direction != 'D') {
+            ghost.updateDirection('U');
+        }
+
+        ghost.x += ghost.velocityX;
+        ghost.y += ghost.velocityY;
+        for (let wall of walls) {
+            if (collision(ghost, wall) || ghost.x <= 0 || ghost.x + ghost.width >= boardWidth) {
+                ghost.x -= ghost.velocityX;
+                ghost.y -= ghost.velocityY;
                 const newDir = directions[Math.floor(Math.random()*4)];
                 ghost.updateDirection(newDir);
             }
-            update();
         }
+    }
 
-        function showGameOver() {
-            const go = document.getElementById("game-over");
-            go.style.display = "flex";
-            go.classList.add("animate-go");
-            document.getElementById("final-score").innerText = "Score: " + score;
-            const msgEl = document.getElementById("high-score-msg");
-            const localBest = parseInt(localStorage.getItem('pacman_highscore')) || 0;
-            if (score > localBest) {
-                localStorage.setItem('pacman_highscore', score);
-            }
-            db.ref('users/' + playerName.toLowerCase()).once('value', snap => {
-                const cloudBest = snap.val()?.pacman_highscore || 0;
-                if (score > cloudBest) {
-                    msgEl.innerText = "Syncing score, please wait...";
-                    msgEl.style.color = "#f1c40f";
-                    db.ref('users/' + playerName.toLowerCase()).update({ pacman_highscore: score })
-                    .then(() => {
-                        msgEl.innerText = "Successfully Synced! NEW HIGH SCORE! 🔥";
-                        msgEl.style.color = "#00ff88";
-                    }).catch(err => {
-                        msgEl.innerText = "Sync Failed! (Saved Locally)";
-                        msgEl.style.color = "#ff3366";
-                        console.error("Firebase Error:", err);
-                    });
-                } else {
-                    msgEl.innerText = "Best: " + Math.max(cloudBest, localBest);
-                    msgEl.style.color = " #CFFF04";
-                }
-            });
+    // food collision
+    let eaten = null;
+    for (let food of foods) {
+        if (collision(pacman, food)) {
+            eaten = food;
+            score += 10;
+            break;
         }
+    }
+    if (eaten) foods.delete(eaten);
 
-        function resetGame() {
-            document.getElementById("game-over").style.display = "none";
-            document.getElementById("game-over").classList.remove("animate-go");
-            document.getElementById("home-screen").style.display = "flex";
+    // next level
+    if (foods.size == 0) {
+        loadMap();
+        resetPositions();
+    }
+}
+    function collision(a, b) {
+        return a.x < b.x + b.width &&
+               a.x + a.width > b.x &&
+               a.y < b.y + b.height &&
+               a.y + a.height > b.y;
+    }
+
+    function resetPositions() {
+        if (!pacman) return;
+        pacman.reset();
+        pacman.velocityX = 0;
+        pacman.velocityY = 0;
+        for (let ghost of ghosts) {
+            ghost.reset();
         }
+    }
 
-        function toggleSettings() {
-            const ss = document.getElementById("settings-screen");
-            ss.style.display = (ss.style.display === 'none' ? 'flex' : 'none');
+    function changeDir(dir) {
+    if (!pacman || !gameRunning || gameOver) return;
+
+    // Map string -> single-letter direction used by Block
+    const dirMap = { 'UP':'U', 'DOWN':'D', 'LEFT':'L', 'RIGHT':'R' };
+    const want = dirMap[dir];
+    if (!want) return;
+
+    // Try to apply immediately
+    const ok = pacman.updateDirection(want);
+    if (ok) {
+        // only update image when move accepted
+        if (want === 'U') pacman.image = pacmanUpImage || pacman.image;
+        else if (want === 'D') pacman.image = pacmanDownImage || pacman.image;
+        else if (want === 'L') pacman.image = pacmanLeftImage || pacman.image;
+        else if (want === 'R') pacman.image = pacmanRightImage || pacman.image;
+
+        // clear any queued direction
+        pacman.nextDirection = null;
+    } else {
+        // can't go that way right now — queue it and update the image to show intent
+        pacman.nextDirection = want;
+        // OPTIONAL: show intent visually (you can remove if you don't want image to change until applied)
+        // pacman.image = (want==='U') ? pacmanUpImage : (want==='D') ? pacmanDownImage : (want==='L') ? pacmanLeftImage : pacmanRightImage;
+        // In your case you asked image must sync with actual direction, so we DO NOT change image here.
+    }
+}
+    // Guarded keyboard input
+    document.addEventListener("keydown", (e) => {
+        if (!gameRunning || !pacman || gameOver) return;
+        const key = e.key.toLowerCase();
+        if (key === "arrowleft" || key === "a") changeDir("LEFT");
+        else if (key === "arrowup" || key === "w") changeDir("UP");
+        else if (key === "arrowright" || key === "d") changeDir("RIGHT");
+        else if (key === "arrowdown" || key === "s") changeDir("DOWN");
+    });
+
+    function startGame() {
+        if (gameRunning) return; // prevent duplicates
+        document.getElementById("home-screen").style.display = "none";
+        document.getElementById("settings-screen").style.display = "none";
+        score = 0;
+        lives = 1; // more playable default
+        gameOver = false;
+        gameRunning = true;
+        loadMap();
+        resetPositions();
+        for (let ghost of ghosts) {
+            const newDir = directions[Math.floor(Math.random()*4)];
+            ghost.updateDirection(newDir);
         }
+        update();
+    }
 
-        let isCustomizing = false;
-        function toggleCtrlSettings() {
-            isCustomizing = !isCustomizing;
-            const screen = document.getElementById('ctrl-custom-screen');
-            screen.style.display = isCustomizing ? 'flex' : 'none';
-            document.getElementById('controls').classList.toggle('customizing', isCustomizing);
+    function showGameOver() {
+        gameRunning = false;
+        const go = document.getElementById("game-over");
+        go.style.display = "flex";
+        go.classList.add("animate-go");
+        document.getElementById("final-score").innerText = "Score: " + score;
+        const msgEl = document.getElementById("high-score-msg");
+        const localBest = parseInt(localStorage.getItem('pacman_highscore')) || 0;
+        if (score > localBest) {
+            localStorage.setItem('pacman_highscore', score);
         }
-
-        function resetControls() {
-            if (confirm("Reset all buttons to default?")) {
-                const controlButtons = document.querySelectorAll('.ctrl-btn');
-                controlButtons.forEach(btn => {
-                    localStorage.removeItem('pos_' + btn.id);
+        // Firebase sync (keeps original behavior)
+        db.ref('users/' + playerName.toLowerCase()).once('value', snap => {
+            const cloudBest = snap.val()?.pacman_highscore || 0;
+            if (score > cloudBest) {
+                msgEl.innerText = "Syncing score, please wait...";
+                msgEl.style.color = "#f1c40f";
+                db.ref('users/' + playerName.toLowerCase()).update({ pacman_highscore: score })
+                .then(() => {
+                    msgEl.innerText = "Successfully Synced! NEW HIGH SCORE! 🔥";
+                    msgEl.style.color = "#00ff88";
+                }).catch(err => {
+                    msgEl.innerText = "Sync Failed! (Saved Locally)";
+                    msgEl.style.color = "#ff3366";
+                    console.error("Firebase Error:", err);
                 });
-                location.reload();
+            } else {
+                msgEl.innerText = "Best: " + Math.max(cloudBest, localBest);
+                msgEl.style.color = "#CFFF04";
             }
-        }
+        });
+    }
 
-        // Load saved positions for each control button
-        const controlButtons = document.querySelectorAll('.ctrl-btn');
-        function loadButtonPositions() {
+    function resetGame() {
+        document.getElementById("game-over").style.display = "none";
+        document.getElementById("game-over").classList.remove("animate-go");
+        document.getElementById("home-screen").style.display = "flex";
+    }
+
+    function toggleSettings() {
+        const ss = document.getElementById("settings-screen");
+        ss.style.display = (ss.style.display === 'none' ? 'flex' : 'none');
+    }
+
+    let isCustomizing = false;
+    function toggleCtrlSettings() {
+        isCustomizing = !isCustomizing;
+        const screen = document.getElementById('ctrl-custom-screen');
+        screen.style.display = isCustomizing ? 'flex' : 'none';
+        document.getElementById('controls').classList.toggle('customizing', isCustomizing);
+    }
+
+    function resetControls() {
+        if (confirm("Reset all buttons to default?")) {
+            const controlButtons = document.querySelectorAll('.ctrl-btn');
             controlButtons.forEach(btn => {
-                const pos = JSON.parse(localStorage.getItem('pos_' + btn.id));
-                if (pos) {
-                    btn.style.left = pos.left;
-                    btn.style.bottom = pos.bottom;
-                    btn.style.transform = 'none';
-                }
+                localStorage.removeItem('pos_' + btn.id);
             });
+            location.reload();
         }
-        loadButtonPositions();
+    }
 
+    // Load saved positions for each control button (run after DOM ready)
+    function loadButtonPositions() {
+        const controlButtons = document.querySelectorAll('.ctrl-btn');
+        controlButtons.forEach(btn => {
+            const pos = JSON.parse(localStorage.getItem('pos_' + btn.id));
+            if (pos) {
+                btn.style.left = pos.left;
+                btn.style.bottom = pos.bottom;
+                btn.style.transform = 'none';
+            }
+        });
+
+        // attach touch dragging listeners (safe to attach now)
         controlButtons.forEach(btn => {
             let activeDrag = false;
             btn.addEventListener("touchstart", (e) => {
@@ -573,7 +641,7 @@
                 }));
             });
         });
-    
-    </script>
+    }
+</script>
 </body>
 </html>
