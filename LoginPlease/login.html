@@ -241,11 +241,13 @@
                 sub.innerText = "Claim your Unique ID";
                 btn.innerText = "CREATE ACCOUNT";
                 switcher.innerText = "Have an account? Login";
+            const showTrouble = () => document.getElementById('trouble-link').style.display = "none";
             } else {
                 header.innerText = "LOGIN";
                 sub.innerText = "Enter the Arcade World";
                 btn.innerText = "ENTER";
                 switcher.innerText = "New here? Create ID";
+            const showTrouble = () => document.getElementById('trouble-link').style.display = "none";
             }
         }
 
