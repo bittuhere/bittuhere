@@ -45,58 +45,64 @@
             let userErrors = [];
             let passErrors = [];
 
-            // 1. Username Structure Analysis
-            if (errorMsg.includes("Letters & Numbers") || errorMsg.includes("short")) {
-                userArea.innerHTML = `<div class="section-title">USERNAME ISSUES</div>`;
-                if (/\s/.test(user)) userErrors.push("<b>Spaces Detected:</b> Usernames cannot have spaces. Please remove them.");
-                if (/[A-Z]/.test(user)) userErrors.push("<b>Capital Letters:</b> System only accepts lowercase (a-z).");
-                if (/[^a-zA-Z0-9]/.test(user)) userErrors.push("<b>Special Symbols:</b> Characters like @, #, $ are not allowed.");
-                if (user.length > 0 && user.length < 3) userErrors.push("<b>Length Error:</b> Username must be at least 3 characters long.");
+            // 1. Reset areas
+            userArea.innerHTML = "";
+            passArea.innerHTML = "";
+
+            // 2. Username & Blocked Analysis
+            if (errorMsg.includes("Letters & Numbers") || errorMsg.includes("short") || errorMsg.includes("BLOCKED") || errorMsg.includes("taken") || errorMsg.includes("not found")) {
+                userArea.innerHTML = `<div class="section-title">USERNAME & ACCESS ANALYSIS</div>`;
                 
+                if (errorMsg.includes("BLOCKED")) {
+                    userErrors.push("<b>Account Blocked:</b> Admin has restricted this ID due to suspicious activity or policy violation.");
+                    
+                }
+                if (/\s/.test(user) && !errorMsg.includes("BLOCKED")) userErrors.push("<b>Spaces Detected:</b> Usernames cannot have spaces. Please join the words.");
+                if (/[A-Z]/.test(user) && !errorMsg.includes("BLOCKED")) userErrors.push("<b>Capital Letters:</b> Only lowercase letters (a-z) are allowed.");
+                if (/[^a-zA-Z0-9]/.test(user) && !errorMsg.includes("BLOCKED")) userErrors.push("<b>Invalid Characters:</b> Symbols like @, #, $ are not permitted.");
+                if (user.length > 0 && user.length < 3 && !errorMsg.includes("BLOCKED")) userErrors.push("<b>Length Error:</b> Username must be at least 3 characters.");
+                if (errorMsg.includes("taken") && !errorMsg.includes("BLOCKED")) userErrors.push("<b>Name Conflict:</b> This username is already registered by another player.");
+                if (errorMsg.includes("not found") && !errorMsg.includes("BLOCKED")) userErrors.push("<b>ID Not Found:</b> This username doesn't exist. Did you forget to 'Create ID'?");
+
                 userErrors.forEach(err => userArea.innerHTML += `<div class='error-item'>${err}</div>`);
-                generateSuggestion(user);
+                
+                // Username issues par suggestion zaroor dikhayein
+                if (userErrors.length > 0 && !errorMsg.includes("BLOCKED")) generateSuggestion(user);
             }
 
-            // 2. Password Specific Analysis
+            // 3. Password Specific Analysis
             if (errorMsg.includes("Password") || errorMsg.includes("short")) {
-                passArea.innerHTML = `<div class="section-title">PASSWORD ISSUES</div>`;
-                if (errorMsg.includes("short")) passErrors.push("<b>Length Error:</b> Your password must be at least 3 characters long.");
-                if (errorMsg.includes("Wrong Password")) passErrors.push("<b>Identity Mismatch:</b> The password does not match this username. Check Caps Lock.");
+                passArea.innerHTML = `<div class="section-title">PASSWORD SECURITY CHECK</div>`;
+                if (errorMsg.includes("short")) passErrors.push("<b>Weak Password:</b> Your password must be at least 3 characters long for security.");
+                if (errorMsg.includes("Wrong Password")) passErrors.push("<b>Mismatch Error:</b> The password entered does not match our records for this user.");
                 
                 passErrors.forEach(err => passArea.innerHTML += `<div class='error-item'>${err}</div>`);
             }
-
-            // 3. Identity Errors
-            if (errorMsg.includes("not found") || errorMsg.includes("taken")) {
-                userArea.innerHTML = `<div class="section-title">ACCOUNT ISSUES</div>`;
-                if(errorMsg.includes("not found")) userErrors.push("<b>Non-Existent ID:</b> No account found with this name. Did you 'Create ID' yet?");
-                if(errorMsg.includes("taken")) {
-                    userErrors.push("<b>Taken:</b> Someone else already has this username.");
-                    generateSuggestion(user);
-                }
-                userErrors.forEach(err => userArea.innerHTML += `<div class='error-item'>${err}</div>`);
+            
+            // 4. Default if nothing matched
+            if (userErrors.length === 0 && passErrors.length === 0) {
+                userArea.innerHTML = `<div class='error-item' style='border-left-color:#00f3ff'><b>System Note:</b> Please ensure your internet is stable and you were redirected here form login page.</div>`;
             }
         }
 
         function generateSuggestion(input) {
             const area = document.getElementById('suggestion-area');
-            // Clean the name: lowercase + remove symbols + remove spaces
+            // Clean logic: lowercase + remove symbols + remove spaces
             let suggestion = input.toLowerCase().replace(/[^a-z0-9]/g, '');
             
-            // If cleaned name is too short, add numbers or a prefix
             if (suggestion.length < 3) {
                 suggestion = "player" + Math.floor(100 + Math.random() * 899);
             } else {
                 suggestion = suggestion + Math.floor(10 + Math.random() * 89);
             }
 
-            // Final Verification against rules
+            // Verify final suggestion against rules
             if (/^[a-z0-9]{3,}$/.test(suggestion)) {
                 area.innerHTML = `
                     <div class="suggestion-box">
                         <p style="margin:0; color:#00f3ff; font-size:0.9rem;">RE-VALIDATED SUGGESTION:</p>
                         <div class="suggested-name">${suggestion}</div>
-                        <p style="margin:5px 0 0 0; font-size:0.75rem; color:#888;">(This name follows all arcade rules)</p>
+                        <p style="margin:5px 0 0 0; font-size:0.75rem; color:#888;">(This name follows all security protocols)</p>
                     </div>`;
             }
         }
