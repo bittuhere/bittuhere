@@ -272,12 +272,14 @@
             const showTrouble = () => document.getElementById('trouble-link').style.display = "block";
 
             // 'pass' ki jagah 'rawPass' check karein taaki asli length pata chale
-if (user.length < 3 || rawPass.length < 3) {
+            // 'rawPass' check taaki hashing se pehle length pata chale
+            if (user.length < 3 || (rawPass && rawPass.length < 3)) {
                 status.innerText = "Username/Password too short.";
                 status.className = "status-msg error";
                 showTrouble(); 
                 return;
             }
+
 
             const validUser = /^[a-z0-9]+$/.test(user);
             if (!validUser) {
@@ -300,7 +302,7 @@ if (user.length < 3 || rawPass.length < 3) {
                         showTrouble();
                     } else {
                         db.ref('users/' + user).set({
-                            password: pass, score: 0, dino_highscore: 0, flappy_highscore: 0, vipCoins: 0, hp: 100
+                            password: pass, score: 0, dino_highscore: 0, flappy_highscore: 0, pacman_highscore: 0
                         }).then(() => {
                             loader.style.display = "none";
                             status.innerText = "Account Created! Logging in...";
@@ -324,7 +326,15 @@ if (user.length < 3 || rawPass.length < 3) {
                     loader.style.display = "none";
                     if (snapshot.exists()) {
                         const data = snapshot.val();
+                        // Pehle password match karein, phir blocked status check karein
                         if (data.password === pass) {
+                            // Blocked check: Agar Admin ne block kiya hai
+                            if (data.blocked === true) {
+                                status.innerText = "Access Denied: This account is BLOCKED!";
+                                status.className = "status-msg error";
+                                showTrouble(); // User troubleshoot par ja kar karan dekh sakta hai
+                                return;
+                            }
                             status.innerText = "Success!";
                             status.className = "status-msg success";
                             loginSuccess(user);
