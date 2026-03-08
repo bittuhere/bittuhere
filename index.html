@@ -391,22 +391,35 @@
         </div>
 
         <script>
-        function openChangePass() {
-            const oldPass = prompt("Enter OLD password:");
-            if(!oldPass) return;
-            const uid = localStorage.getItem('playerName').toLowerCase().trim();
-            db.ref('users/' + uid).once('value', snap => {
-                if(snap.val().password === oldPass) {
-                    const newPass = prompt("Enter NEW password (min 4 chars):");
-                    if(newPass && newPass.length >= 4) {
-                        db.ref('users/' + uid).update({ password: newPass }).then(() => {
-                            alert("Success! Re-login required.");
-                            logout();
-                        });
-                    } else { alert("Invalid new password!"); }
-                } else { alert("Wrong old password!"); }
-            });
-        }
+            
+                async function openChangePass() {
+    const oldRaw = prompt("Enter OLD password:");
+    if(!oldRaw) return;
+    
+    // Convert old input to hash to compare with DB
+    const utf8Old = new TextEncoder().encode(oldRaw);
+    const hashOld = await crypto.subtle.digest('SHA-1', utf8Old);
+    const oldHashInput = Array.from(new Uint8Array(hashOld)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const uid = localStorage.getItem('playerName').toLowerCase().trim();
+    db.ref('users/' + uid).once('value', async snap => {
+        if(snap.val().password === oldHashInput) {
+            const newRaw = prompt("Enter NEW password (min 4 chars):");
+            if(newRaw && newRaw.length >= 4) {
+                // Hash the NEW password before saving
+                const utf8New = new TextEncoder().encode(newRaw);
+                const hashNew = await crypto.subtle.digest('SHA-1', utf8New);
+                const newHashSave = Array.from(new Uint8Array(hashNew)).map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                db.ref('users/' + uid).update({ password: newHashSave }).then(() => {
+                    alert("Success! Re-login required.");
+                    logout();
+                });
+            } else { alert("Invalid new password!"); }
+        } else { alert("Wrong old password!"); }
+    });
+}
+        
         </script>
     </div>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
