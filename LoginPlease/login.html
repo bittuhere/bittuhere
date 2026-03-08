@@ -114,11 +114,20 @@
             color: white;
         }
 
-        .status-msg {
+                .status-msg {
             margin-top: 15px;
             font-size: 0.9rem;
             min-height: 20px;
             font-weight: bold;
+        }
+        /* Trouble link styling */
+        .trouble-link {
+            display: none;
+            margin-top: 8px;
+            color: var(--neon-blue);
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: underline;
         }
 
         .error {
@@ -181,6 +190,8 @@
 
         <div class="loader" id="loader"></div>
         <div class="status-msg" id="status"></div>
+        <div id="trouble-link" class="trouble-link" onclick="goToTroubleshoot()">Trouble signing in? Click here</div>
+
 
         <button class="btn btn-go" onclick="processAuth()" id="submit-btn">ENTER</button>
 
@@ -205,6 +216,15 @@
         const db = firebase.database();
 
         let isSignup = false;
+
+        // Function to convert password into 40-character SHA-1 Hash
+        async function hashPassword(string) {
+            const utf8 = new TextEncoder().encode(string);
+            const hashBuffer = await crypto.subtle.digest('SHA-1', utf8);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
 
         function toggleMode() {
             isSignup = !isSignup;
@@ -242,16 +262,20 @@
             }
         }
 
-        function processAuth() {
-
+                async function processAuth() {
             const user = document.getElementById('username').value.trim().toLowerCase();
-            const pass = document.getElementById('password').value;
+            const rawPass = document.getElementById('password').value; // Asli password
+            const pass = await hashPassword(rawPass); // 40-character secure hash
             const status = document.getElementById('status');
             const loader = document.getElementById('loader');
 
-            if (user.length < 3 || pass.length < 3) {
+            const showTrouble = () => document.getElementById('trouble-link').style.display = "block";
+
+            // 'pass' ki jagah 'rawPass' check karein taaki asli length pata chale
+if (user.length < 3 || rawPass.length < 3) {
                 status.innerText = "Username/Password too short.";
                 status.className = "status-msg error";
+                showTrouble(); 
                 return;
             }
 
@@ -259,52 +283,45 @@
             if (!validUser) {
                 status.innerText = "Username: Letters & Numbers only.";
                 status.className = "status-msg error";
+                showTrouble(); 
                 return;
             }
 
             loader.style.display = "block";
             status.innerText = "";
+            document.getElementById('trouble-link').style.display = "none";
 
             if (isSignup) {
-                // --- SIGN UP LOGIC WITH ERROR HANDLING ---
                 db.ref('users/' + user).once('value').then((snapshot) => {
                     if (snapshot.exists()) {
                         loader.style.display = "none";
                         status.innerText = "Username taken! Choose another.";
                         status.className = "status-msg error";
+                        showTrouble();
                     } else {
-                        // Create user with default game data
                         db.ref('users/' + user).set({
-                            password: pass,
-                            score: 0,
-                            dino_highscore: 0,
-                            flappy_highscore: 0,
-                            vipCoins: 0,
-                            hp: 100
+                            password: pass, score: 0, dino_highscore: 0, flappy_highscore: 0, vipCoins: 0, hp: 100
                         }).then(() => {
                             loader.style.display = "none";
                             status.innerText = "Account Created! Logging in...";
                             status.className = "status-msg success";
                             loginSuccess(user);
                         }).catch(err => {
-                            // Agar write permission nahi hai (Firebase Rules Issue)
                             loader.style.display = "none";
-                            status.innerText = "Error creating account. Check DB Rules!";
+                            status.innerText = "Error creating account.";
                             status.className = "status-msg error";
-                            console.error(err);
+                            showTrouble();
                         });
                     }
                 }).catch(err => {
                     loader.style.display = "none";
                     status.innerText = "Database Connection Error.";
                     status.className = "status-msg error";
+                    showTrouble();
                 });
-
             } else {
-                // --- LOGIN LOGIC ---
                 db.ref('users/' + user).once('value').then((snapshot) => {
                     loader.style.display = "none";
-
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         if (data.password === pass) {
@@ -314,14 +331,17 @@
                         } else {
                             status.innerText = "Wrong Password.";
                             status.className = "status-msg error";
+                            showTrouble(); // Fixed: Ab yahan bhi link dikhega
                         }
                     } else {
                         status.innerText = "User not found.";
                         status.className = "status-msg error";
+                        showTrouble(); // Fixed: Ab yahan bhi link dikhega
                     }
                 }).catch((error) => {
                     loader.style.display = "none";
                     status.innerText = "Connection Error.";
+                    showTrouble();
                 });
             }
         }
@@ -338,6 +358,16 @@
         document.getElementById('password').addEventListener('keypress', (e) => {
             if(e.key === 'Enter') processAuth();
         });
+    
+        function goToTroubleshoot() {
+            const user = document.getElementById('username').value;
+            const error = document.getElementById('status').innerText;
+            // Username aur Error dono bhejna
+            window.location.href = `troubleshoot.html?u=${encodeURIComponent(user)}&e=${encodeURIComponent(error)}`;
+        }
+
+
+ 
     </script>
 
 </body>
