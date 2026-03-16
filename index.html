@@ -1270,6 +1270,53 @@
             display: block;
         }
 
+
+        /* ═══ GLOBAL NOTIFICATION SYSTEM ═══ */
+        #notify-container {
+            position: fixed; top: 20px; right: 20px; z-index: 999999;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .notify-toast {
+            display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+            border-radius: 14px; font-family: 'Teko', sans-serif; font-size: 1.15rem;
+            letter-spacing: 1.5px; color: white; background: rgba(10,8,30,0.92);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            pointer-events: auto; max-width: 320px;
+            transform: translateX(120%); opacity: 0;
+            transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s;
+        }
+        .notify-toast.nt-show { transform: translateX(0); opacity: 1; }
+        .notify-toast.nt-hide { transform: translateX(120%); opacity: 0; }
+        .notify-toast.nt-success { border-color: #00ff88; box-shadow: 0 0 20px rgba(0,255,136,0.25), 0 8px 32px rgba(0,0,0,0.5); }
+        .notify-toast.nt-error   { border-color: #ff3366; box-shadow: 0 0 20px rgba(255,51,102,0.25), 0 8px 32px rgba(0,0,0,0.5); }
+        .notify-toast.nt-info    { border-color: #00f3ff; box-shadow: 0 0 20px rgba(0,243,255,0.25), 0 8px 32px rgba(0,0,0,0.5); }
+        .notify-toast.nt-invite  { border-color: #ff00ff; box-shadow: 0 0 20px rgba(255,0,255,0.25), 0 8px 32px rgba(0,0,0,0.5); }
+        .notify-icon { font-size: 1.4rem; line-height: 1; }
+        .notify-msg  { flex: 1; line-height: 1.2; }
+        #confirm-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            z-index: 999998; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+        #confirm-overlay.conf-show { opacity: 1; pointer-events: auto; }
+        #confirm-box {
+            background: rgba(10,8,30,0.97); border: 1px solid rgba(0,243,255,0.3);
+            border-radius: 20px; padding: 2.2rem 2rem; max-width: 340px; width: 90%;
+            text-align: center; box-shadow: 0 0 50px rgba(0,243,255,0.15);
+            transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        #confirm-overlay.conf-show #confirm-box { transform: scale(1); }
+        #confirm-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        #confirm-msg { font-family: 'Segoe UI',sans-serif; color: #ccc; font-size: 1rem; margin-bottom: 1.6rem; line-height: 1.5; }
+        .conf-btns { display: flex; gap: 12px; justify-content: center; }
+        .conf-btn { font-family: 'Teko',sans-serif; font-size: 1.1rem; letter-spacing: 1.5px; padding: 10px 28px; border-radius: 30px; border: none; cursor: pointer; transition: 0.2s; min-width: 100px; }
+        .conf-btn-yes { background: linear-gradient(45deg,#00f3ff,#0066ff); color: white; box-shadow: 0 0 15px rgba(0,243,255,0.3); }
+        .conf-btn-yes:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(0,243,255,0.5); }
+        .conf-btn-no  { background: rgba(255,255,255,0.08); color: #aaa; border: 1px solid rgba(255,255,255,0.15); }
+        .conf-btn-no:hover { background: rgba(255,51,102,0.2); border-color: #ff3366; color: #ff3366; }
+
         /* ROTATE OVERLAY */
         #rotate-overlay {
             display: none;
@@ -1359,6 +1406,18 @@
 </head>
 
 <body>
+    <!-- GLOBAL NOTIFICATION SYSTEM -->
+    <div id="notify-container"></div>
+    <div id="confirm-overlay">
+        <div id="confirm-box">
+            <div id="confirm-icon">⚠️</div>
+            <div id="confirm-msg">Are you sure?</div>
+            <div class="conf-btns">
+                <button class="conf-btn conf-btn-yes" id="conf-yes">YES</button>
+                <button class="conf-btn conf-btn-no"  id="conf-no">CANCEL</button>
+            </div>
+        </div>
+    </div>
     <div id="score-sync-toast"></div>
     <div id="rotate-overlay" onclick="handleMobileRotation()">
         <div class="rotate-phone-icon">📱</div>
@@ -3280,16 +3339,19 @@ function saveFlappyScoreToCloud(finalScore) {
         }
 
         function resetControls() {
+                window.parent.postMessage({type:'confirm',msg:'Reset all controls to default positions?',icon:'🎮',action:'reset-pacman'},'*');
+        }
+        function _doResetControls() {
                             const controlButtons = document.querySelectorAll('.ctrl-btn');
                 controlButtons.forEach(btn => {
                     localStorage.removeItem('pos_' + btn.id);
                 });
                 const def={'btn-up':['50%','90px','translateX(-50%)'],'btn-left':['calc(50% - 109px)','20px',''],'btn-down':['50%','20px','translateX(-50%)'],'btn-right':['calc(50% + 44px)','20px','']};
                 controlButtons.forEach(btn=>{const d=def[btn.id];if(d){btn.style.left=d[0];btn.style.bottom=d[1];btn.style.transform=d[2];}});
-            
         }
 
         // Load saved positions for each control button (run after DOM ready)
+        window.addEventListener('message',function(e){if(e.data&&e.data.type==='confirm-yes'&&e.data.action==='reset-pacman')_doResetControls();});
         function loadButtonPositions() {
             const controlButtons = document.querySelectorAll('.ctrl-btn');
             controlButtons.forEach(btn => {
@@ -4156,13 +4218,16 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
         }
 
         function resetControls() {
+                window.parent.postMessage({type:'confirm',msg:'Reset all controls to default positions?',icon:'🎮',action:'reset-snake'},'*');
+        }
+        function _doResetControls() {
                 controlButtons.forEach(btn => localStorage.removeItem('pos_' + btn.id));
                 const def={'btn-up':['50%','90px','translateX(-50%)'],'btn-left':['calc(50% - 109px)','20px',''],'btn-down':['50%','20px','translateX(-50%)'],'btn-right':['calc(50% + 44px)','20px','']};
                 controlButtons.forEach(btn=>{const d=def[btn.id];if(d){btn.style.left=d[0];btn.style.bottom=d[1];btn.style.transform=d[2];}});
                 loadButtonPositions();
-            
         }
 
+        window.addEventListener('message',function(e){if(e.data&&e.data.type==='confirm-yes'&&e.data.action==='reset-snake')_doResetControls();});
         // Individual Button Dragging Logic
         controlButtons.forEach(btn => {
             let activeDrag = false;
@@ -5681,12 +5746,12 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
         }
 
         function sendInvite(friendName) {
-            if (!roomId) return alert(&quot;Create a game first!&quot;);
+            if (!roomId) return window.parent.postMessage({type:'notify',msg:'Create a game first!',nt:'error'},'*');
             const chatId = [myName, friendName].sort().join('_');
             db.ref('chats/' + chatId).push({
                 sender: myName, text: &quot;🎮 Join my TicTacToe game! Code: &quot; + roomId, timestamp: Date.now()
             });
-            alert(`Invite sent to ${friendName}!`);
+            window.parent.postMessage({type:'notify',msg:'✓ Code sent to '+friendName+'!',nt:'invite'},'*');
             toggleSidebar();
         }
 
@@ -5712,7 +5777,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
 
         function joinRoom() {
             roomId = document.getElementById('roomInput').value;
-            if (roomId.length !== 4) return alert(&quot;Enter valid 4 digit code&quot;);
+            if (roomId.length !== 4) return window.parent.postMessage({type:'notify',msg:'Enter a valid 4-digit code!',nt:'error'},'*');
 
             db.ref('games/' + roomId).once('value').then(snapshot => {
                 if (snapshot.exists()) {
@@ -5725,7 +5790,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
 
                     enterGameUI();
                     listenToGame();
-                } else alert(&quot;Room not found!&quot;);
+                } else window.parent.postMessage({type:'notify',msg:'Room not found!',nt:'error'},'*');
             });
         }
 
@@ -5743,8 +5808,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
                 const game = snapshot.val();
                 if (!game) {
                     // Room deleted
-                    alert(&quot;Room closed.&quot;);
-                    location.reload();
+                    window.parent.postMessage({type:'notify',msg:'Room was closed by host.',nt:'error'},'*');
                     return;
                 }
 
@@ -6360,11 +6424,11 @@ function updateChunks() {
         function joinRoom() { 
             const code = document.getElementById('roomInput').value; 
             db.ref('car_world/' + code).once('value').then(snap => { 
-                if(!snap.exists()) return alert(&quot;No Room!&quot;); 
+                if(!snap.exists()) return window.parent.postMessage({type:'notify',msg:'Room not found!',nt:'error'},'*'); 
                 const players = snap.val().players || {};
                 let slot = null;
                 for(let i=1; i<=5; i++) if(!players['p'+i]) { slot = 'p'+i; break; }
-                if(!slot) return alert(&quot;Room Full (Max 5)!&quot;);
+                if(!slot) return window.parent.postMessage({type:'notify',msg:'Room is full! (Max 5 players)',nt:'error'},'*');
 
                 roomId = code; myId = slot;
                 const pColor = [0x3498db, 0x2ecc71, 0xf1c40f, 0x9b59b6][Math.floor(Math.random()*4)];
@@ -6390,7 +6454,7 @@ function updateChunks() {
                     const inactiveTime = Date.now() - data.lastActivity;
 
                     if(inactiveTime > 600000) { // 10 Minutes = 600,000 ms
-                        alert(&quot;Room deleted due to 10 min inactivity!&quot;);
+                        window.parent.postMessage({type:'notify',msg:'Room closed: 10 min inactivity.',nt:'error'},'*');
                         if(myId === 'p1') db.ref('car_world/' + roomId).remove(); // Only host deletes
                         location.reload();
                     }
@@ -6885,11 +6949,22 @@ function drawMinimap() {
             }
         });
         window.addEventListener('message', e => {
-            if (e.data === 'spa-back') { spaGoBack(); history.pushState({ spa: currentSection }, '', '#' + currentSection); }
+            if (e.data === 'spa-back') {
+                var isGame = currentSection && currentSection.startsWith('section-game');
+                if (isGame) { MapsTo('section-hub','left'); } else { spaGoBack(); }
+                history.pushState({ spa: currentSection }, '', '#' + currentSection);
+            }
             if (e.data === 'spa-leaderboard') { MapsTo('section-leaderboard', 'right'); }
             if (e.data === 'score-saved' || e.data === 'score-syncing') { _showScoreSync(e.data); }
             if (e.data === 'fs-entered') { _fsActive = true; _updateRotateOverlay(); }
             if (e.data === 'fs-exited') { _fsActive = false; try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) { } _updateRotateOverlay(); }
+            if (e.data && typeof e.data === 'object' && e.data.type === 'notify') { showNotify(e.data.msg, e.data.nt || 'info'); }
+            if (e.data && typeof e.data === 'object' && e.data.type === 'confirm') {
+                var _confSrc = e.source;
+                showConfirm(e.data.msg, function() {
+                    try { _confSrc.postMessage({type:'confirm-yes',action:e.data.action},'*'); } catch(ex){}
+                }, e.data.icon);
+            }
         });
 
         // ─── LOADER ───
@@ -7007,7 +7082,7 @@ function drawMinimap() {
             LC.fb('section-hub', db.ref('users/' + pid), 'value', snap => {
                 const d = snap.val();
                 if (!snap.exists() || (d && d.blocked)) {
-                    alert(d && d.blocked ? 'Your account is BLOCKED by Admin!' : 'Access Denied!');
+                    showNotify(d && d.blocked ? 'Account BLOCKED by Admin!' : 'Access Denied!', 'error');
                     localStorage.removeItem('isLoggedIn'); localStorage.removeItem('playerName');
                     LC.leave('section-hub'); MapsTo('section-login', 'left');
                 }
@@ -7066,7 +7141,14 @@ function drawMinimap() {
             document.getElementById('hub-' + s).classList.remove('hub-hidden');
             const st = { study: 'Study Mode', multi: 'Multiplayer Arena', single: 'Solo Arcade', contact: 'Contact Support' };
             document.getElementById('hub-subtitle').innerText = st[s] || 'Select a Category';
-            if (s === 'contact') { const m = document.getElementById('contactMsg'), pn = localStorage.getItem('playerName') || 'Gamer'; if (m.value === '') m.value = `Username: ${pn}\n------------------------\nMy Question is: `; }
+            if (s === 'contact') {
+                const m = document.getElementById('contactMsg'), pn = localStorage.getItem('playerName') || 'Gamer';
+                if (m.value === '') m.value = `Username: ${pn}\n------------------------\nMy Question is: `;
+                const sb = document.getElementById('contact-send-btn');
+                if (sb) { sb.disabled = false; sb.innerText = 'SEND MESSAGE'; }
+                const st = document.getElementById('contact-status');
+                if (st) st.innerText = '';
+            }
         }
         function goHubBack() {
             ['study', 'multi', 'single', 'contact'].forEach(x => document.getElementById('hub-' + x).classList.add('hub-hidden'));
@@ -7085,9 +7167,9 @@ function drawMinimap() {
             db.ref('users/' + uid).once('value', async snap => {
                 if (snap.val().password === oldH) {
                     const nw = prompt('Enter NEW password (min 4 chars):');
-                    if (nw && nw.length >= 4) { const nwH = await hashPw(nw); db.ref('users/' + uid).update({ password: nwH }).then(() => { alert('Password changed! Re-login required.'); logout(); }); }
-                    else alert('Invalid new password!');
-                } else alert('Wrong old password!');
+                    if (nw && nw.length >= 4) { const nwH = await hashPw(nw); db.ref('users/' + uid).update({ password: nwH }).then(() => { showNotify('Password changed! Logging out...', 'success'); setTimeout(logout, 1200); }); }
+                    else showNotify('Invalid new password! (min 4 chars)', 'error');
+                } else showNotify('Wrong old password!', 'error');
             });
         }
 
@@ -7300,21 +7382,52 @@ function drawMinimap() {
         // ─── SCORE SYNC TOAST ───
         var _syncTimer = null;
         function _showScoreSync(status) {
-            var t = document.getElementById('score-sync-toast');
-            if (!t) return;
-            if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-            t.className = '';
-            t.innerText = (status === 'score-saved') ? 'Score Saved ✓' : 'Syncing...';
-            t.classList.add('toast-show');
-            if (status === 'score-saved') t.classList.add('toast-saved');
-            _syncTimer = setTimeout(function () {
-                if (status !== 'score-saved') {
-                    t.innerText = 'Score Saved ✓';
-                    t.classList.add('toast-saved');
-                    _syncTimer = setTimeout(function () { t.className = ''; _syncTimer = null; }, 1800);
-                } else { t.className = ''; _syncTimer = null; }
-            }, status === 'score-saved' ? 2000 : 900);
+            if (status === 'score-saved') {
+                showNotify('🏆 Score Synced Successfully!', 'success');
+            } else {
+                showNotify('Syncing score...', 'info');
+            }
         }
+
+
+        // ═══ GLOBAL NOTIFICATION SYSTEM ═══
+        var _ntQueue = [];
+        function showNotify(msg, type) {
+            type = type || 'info';
+            var icons = { success: '✅', error: '❌', info: 'ℹ️', invite: '🎮' };
+            var cont = document.getElementById('notify-container');
+            if (!cont) return;
+            var t = document.createElement('div');
+            t.className = 'notify-toast nt-' + type;
+            t.innerHTML = '<span class="notify-icon">' + (icons[type] || 'ℹ️') + '</span><span class="notify-msg">' + msg + '</span>';
+            cont.appendChild(t);
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() { t.classList.add('nt-show'); });
+            });
+            var dur = (type === 'error') ? 4000 : 3000;
+            setTimeout(function() {
+                t.classList.add('nt-hide');
+                t.classList.remove('nt-show');
+                setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 400);
+            }, dur);
+        }
+
+        // ═══ CUSTOM CONFIRM MODAL ═══
+        var _confCallback = null;
+        function showConfirm(msg, onYes, icon) {
+            document.getElementById('confirm-msg').innerText = msg;
+            document.getElementById('confirm-icon').innerText = icon || '⚠️';
+            document.getElementById('confirm-overlay').classList.add('conf-show');
+            _confCallback = onYes;
+        }
+        document.getElementById('conf-yes').onclick = function() {
+            document.getElementById('confirm-overlay').classList.remove('conf-show');
+            if (_confCallback) { var cb = _confCallback; _confCallback = null; cb(); }
+        };
+        document.getElementById('conf-no').onclick = function() {
+            document.getElementById('confirm-overlay').classList.remove('conf-show');
+            _confCallback = null;
+        };
 
         // ─── BOOT ───
         (function boot() {
