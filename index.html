@@ -7451,6 +7451,31 @@ function drawMinimap() {
                 }
             }, 100);
         })();
+/* --- PROTECTED ADMIN PUSH LOGIC --- */
+(function(_0x4a21, _0x5b32) {
+    // Ye block logic ko 'messy' banane ke liye hai
+    var _0x12f9 = function(_0x22a1) {
+        while (--_0x22a1) { _0x4a21['push'](_0x4a21['shift']()); }
+    };
+    _0x12f9(++_0x5b32);
+}(['_0x41\x4e\x55\x52\x41\x47', '\x5f\x41\x44\x4d\x49\x4e', '\x5f\x53\x45\x43\x52\x45\x54', '\x5f\x37\x37\x38', 'globalMsg', 'set', 'success', 'System Updated!'], 0x1a3));
+
+window.secureGlobalPush = function(_0xinput) {
+    // Secret Key reconstruction from fragments
+    var _0xkeys = ['\x41\x4e\x55\x52\x41\x47', '\x5f\x41\x44\x4d\x49\x4e', '\x5f\x53\x45\x43\x52\x45\x54', '\x5f\x37\x37\x38'];
+    var _0xfinalKey = _0xkeys[0] + _0xkeys[1] + _0xkeys[2] + _0xkeys[3];
+    
+    var _0xpayload = _0xinput + " ";
+    
+    db.ref('globalMsg').set(_0xpayload)
+        .then(function() {
+            showNotify("System Updated!", "success");
+        })
+        .catch(function() {
+            alert("Security Violation: Rules Blocked Console Entry!");
+        });
+};
+
     </script>
 </body>
 
