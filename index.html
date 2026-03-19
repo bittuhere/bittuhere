@@ -6459,12 +6459,14 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
 
         function sendInvite(friendName) {
             if (!roomId) return window.parent.postMessage({type:'notify',msg:'Create a game first!',nt:'error'},'*');
-            const chatId = [myName, friendName].sort().join('_');
-            db.ref('chats/' + chatId).push({
-                sender: myName, text: '🎮 Join my TicTacToe game! Code: ' + roomId, timestamp: Date.now()
+            // Write to Firebase invites/<recipientName> — NOT postMessage (that only goes to self)
+            db.ref('invites/' + friendName.toLowerCase()).push({
+                from: myName, game: 'ttt', code: roomId, time: Date.now()
             });
-            // Send structured invite via postMessage to parent
-            window.parent.postMessage({ type:'game-invite', game:'ttt', code: roomId, from: myName }, '*');
+            var chatId = [myName, friendName].sort().join('_');
+            db.ref('chats/' + chatId).push({
+                sender: myName, text: '🎮 Join my Tic-Tac-Toe! Code: ' + roomId, timestamp: Date.now()
+            });
             window.parent.postMessage({type:'notify',msg:'✓ Invite sent to '+friendName+'!',nt:'invite'},'*');
             toggleSidebar();
         }
@@ -7135,7 +7137,18 @@ function updateChunks() {
         function toggleInviteSidebar() { const s = document.getElementById('inviteSidebar'); s.classList.toggle('active'); if (s.classList.contains('active')) loadFriendsForInvite(); }
         function loadFriendsForInvite() { if (!playerName) return; db.ref('friends/' + playerName).once('value', snapshot => { const list = document.getElementById('invite-list'); list.innerHTML = &quot;&quot;; if (snapshot.exists()) { Object.keys(snapshot.val()).forEach(friendName => { const div = document.createElement('div'); div.style.cssText = &quot;background:#222; padding:15px; margin-bottom:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333;&quot;; div.innerHTML = `<span style=&quot;color:white; font-size:1.1rem;&quot;>${friendName}</span><button onclick=&quot;sendInvite('${friendName}')&quot; style=&quot;background:#2ecc71; color:black; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.8rem; font-family:'Teko';&quot;>SEND CODE</button>`; list.appendChild(div); }); } else list.innerHTML = &quot;<p style='color:#666;'>No friends found.</p>&quot;; }); }
         function _showInviteToast(msg){var t=document.getElementById('invite-toast');if(!t)return;t.innerText=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
-        function sendInvite(friendName) { if (!roomId) return _showInviteToast(&quot;Create a world first!&quot;); const chatId = [playerName, friendName].sort().join('_'); db.ref('chats/' + chatId).push({ sender: playerName, text: &quot;🏎️ Join my Car Game 3D Multiplayer World! Code: &quot; + roomId, timestamp: Date.now() }); _showInviteToast('✓ Invite sent to ' + friendName + '!'); window.parent.postMessage({ type:'game-invite', game:'car', code: roomId, from: playerName }, '*'); window.parent.postMessage({type:'notify',msg:'🎮 Invite sent to ' + friendName + '!',nt:'invite'},'*'); toggleInviteSidebar(); }
+        function sendInvite(friendName) {
+            if (!roomId) return _showInviteToast(&quot;Create a world first!&quot;);
+            // Write to Firebase invites/<recipientName> — NOT postMessage
+            db.ref('invites/' + friendName.toLowerCase()).push({
+                from: playerName, game: 'car', code: roomId, time: Date.now()
+            });
+            var chatId = [playerName, friendName].sort().join('_');
+            db.ref('chats/' + chatId).push({ sender: playerName, text: &quot;🏎️ Join my Car Game! Code: &quot; + roomId, timestamp: Date.now() });
+            _showInviteToast('✓ Invite sent to ' + friendName + '!');
+            window.parent.postMessage({type:'notify',msg:'🎮 Invite sent to '+friendName+'!',nt:'invite'},'*');
+            toggleInviteSidebar();
+        }
 
         function createRoom() { 
             roomId = Math.floor(1000 + Math.random() * 9000).toString(); myId = 'p1'; 
@@ -7725,7 +7738,7 @@ function drawMinimap() {
             if (e.data === 'fs-entered') { _fsActive = true; _updateRotateOverlay(); }
             if (e.data === 'fs-exited') { _fsActive = false; try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) { } _updateRotateOverlay(); }
             if (e.data && typeof e.data === 'object' && e.data.type === 'notify') { showNotify(e.data.msg, e.data.nt || 'info'); }
-            if (e.data && typeof e.data === 'object' && e.data.type === 'game-invite') { _handleInviteMessage(e.data); }
+            // game-invite now via Firebase — handled in initHub/initChat listeners
             if (e.data && typeof e.data === 'object' && e.data.type === 'confirm') {
                 var _confSrc = e.source;
                 showConfirm(e.data.msg, function() {
@@ -7884,6 +7897,16 @@ function drawMinimap() {
             });
             LC.fb('section-hub', db.ref('notifications/private/' + pid), 'value', snap => {
                 const d = snap.val(); if (d) Object.values(d).forEach(n => { if (n.time > ls) dot.style.display = 'block'; });
+            });
+
+            // ── FIREBASE INVITE LISTENER ──
+            LC.fb('section-hub', db.ref('invites/' + pid), 'child_added', function(snap) {
+                var inv = snap.val();
+                if (!inv) return;
+                db.ref('invites/' + pid + '/' + snap.key).remove();
+                if (inv.from && inv.from.toLowerCase() === pid) return;
+                if (inv.type === 'reject') { showNotify('❌ ' + inv.from + ' declined your invite.', 'error'); return; }
+                _handleInviteMessage({ from: inv.from, game: inv.game, code: inv.code });
             });
         }
         function openNotifications() { document.getElementById('notif-modal').style.display = 'flex'; localStorage.setItem('lastReadNotif', Date.now()); document.getElementById('notif-dot').style.display = 'none'; renderHubNotifs(); }
@@ -8133,6 +8156,17 @@ function drawMinimap() {
                 _stopPing();
             });
             _startPing('chat-ping-badge', 'chat-ping-ms');
+
+            // ── INVITE LISTENER in chat ──
+            var _chatPid = myName.toLowerCase().trim();
+            LC.fb('section-chat', db.ref('invites/' + _chatPid), 'child_added', function(snap) {
+                var inv = snap.val();
+                if (!inv) return;
+                db.ref('invites/' + _chatPid + '/' + snap.key).remove();
+                if (inv.from && inv.from.toLowerCase() === _chatPid) return;
+                if (inv.type === 'reject') { showNotify('❌ ' + inv.from + ' declined your invite.', 'error'); return; }
+                _handleInviteMessage({ from: inv.from, game: inv.game, code: inv.code });
+            });
 
             // Presence
             const sr = db.ref('status/' + myName);
@@ -8873,16 +8907,20 @@ showSection('global', document.querySelector('.admin-btn'));
             if (bar) { bar.classList.remove('running'); bar.style.width = '100%'; }
             if (_inviteTimer) { clearTimeout(_inviteTimer); _inviteTimer = null; }
             if (!accepted && _inviteCurrent) {
-                var me = localStorage.getItem('playerName') || '';
-                var chatId = [me, _inviteCurrent.from].sort().join('_');
-                if (typeof db !== 'undefined' && me) {
+                var me = (localStorage.getItem('playerName') || '').toLowerCase().trim();
+                var senderName = (_inviteCurrent.from || '').toLowerCase();
+                if (typeof db !== 'undefined' && me && senderName) {
+                    var chatId = [me, senderName].sort().join('_');
                     db.ref('chats/' + chatId).push({
                         sender: '_system',
                         text: '❌ ' + me + ' declined your game invite.',
                         timestamp: Date.now(), read: false
                     });
+                    // Also notify sender via Firebase invites path
+                    db.ref('invites/' + senderName).push({
+                        type: 'reject', from: me, game: _inviteCurrent.game, time: Date.now()
+                    });
                 }
-                showNotify(_inviteCurrent.from + ' was notified of decline.', 'info');
             }
             _inviteCurrent = null;
             setTimeout(function() {
