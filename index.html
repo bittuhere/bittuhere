@@ -1101,6 +1101,7 @@
             border-bottom-right-radius: 2px;
         }
 
+        .msg-system { align-self:center; background:rgba(255,255,255,0.06); border-radius:8px; padding:6px 14px; max-width:90%; }
         .msg-received {
             align-self: flex-start;
             background: #333;
@@ -1436,6 +1437,7 @@
 
         /* ─── FF-STYLE INVITE POPUP ─── */
         #invite-popup {
+            visibility: hidden;
             position: fixed; top: 16px; left: 50%;
             transform: translateX(-50%) translateY(-200%);
             width: 320px; max-width: 92vw;
@@ -1688,9 +1690,10 @@
         <div class="login-card">
             <h1 id="login-header">LOGIN</h1>
             <p id="login-sub">Enter the Arcade World</p>
-            <input type="text" id="login-username" placeholder="Username" autocomplete="username">
+            <form id="login-form" autocomplete="on" onsubmit="processAuth();return false;" style="display:contents;">
+            <input type="text" id="login-username" name="username" placeholder="Username" autocomplete="username">
             <div style="position:relative;">
-                <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+                <input type="password" id="login-password" name="password" placeholder="Password" autocomplete="current-password">
                 <span id="eye-btn" onclick="togglePass()"
                     style="position:absolute;right:15px;top:13px;cursor:pointer;z-index:10;">
                     <img id="eye-icon"
@@ -1702,7 +1705,8 @@
             <div class="status-msg" id="login-status"></div>
             <div id="trouble-link" class="trouble-link" onclick="goToTroubleshoot()">Trouble signing in? Click here
             </div>
-            <button class="l-btn btn-go" onclick="processAuth()" id="submit-btn">ENTER</button>
+            <button class="l-btn btn-go" type="submit" id="submit-btn">ENTER</button>
+            </form>
             <span class="switch-link" onclick="toggleMode()" id="switch-btn">New here? Create ID</span>
         </div>
     </div>
@@ -7170,12 +7174,14 @@ function updateChunks() {
         }
 
         function createRoom() { 
-            roomId = Math.floor(1000 + Math.random() * 9000).toString(); myId = 'p1'; 
-            db.ref('car_world/' + roomId).set({ 
-    status: 'waiting', 
-    lastActivity: Date.now(), // 10 min timer start
-    players: { p1: { x:0, z:0, r:0, n:playerName, color: 0xe74c3c } } 
-}).then(() => { 
+            roomId = Math.floor(1000 + Math.random() * 9000).toString(); myId = 'p1';
+            db.ref('car_world/' + roomId).set({
+                status: 'waiting',
+                lastActivity: Date.now(),
+                players: { p1: { x:0, z:0, r:0, n:playerName, color: 0xe74c3c } }
+            }).then(() => {
+                // Auto-remove host slot if tab is closed
+                db.ref('car_world/' + roomId + '/players/p1').onDisconnect().remove(); 
                 document.getElementById('display-code').innerText = roomId; 
                 document.getElementById('inviteBtn').style.display = 'block'; 
                 document.getElementById('status-msg').innerHTML = `Room: <b>${roomId}</b>. Invite friends to start!`;
@@ -7732,7 +7738,12 @@ function drawMinimap() {
             });
 
             currentSection = prev;
-            if (prev === 'section-hub') LC.timer('section-hub', setTimeout(initHub, 300));
+            if (prev === 'section-hub') {
+                LC.timer('section-hub', setTimeout(initHub, 300));
+                // Reset game status to online when returning to hub
+                _setUserStatus('online');
+                setTimeout(_checkInviteQueue, 800);
+            }
             setTimeout(_updateRotateOverlay, 370);
         }
 
@@ -7789,7 +7800,10 @@ function drawMinimap() {
         }
         function togglePass() {
             const p = document.getElementById('login-password'), icon = document.getElementById('eye-icon');
-            if (p.type === 'password') { p.type = 'text'; icon.src = EYECLOSED; } else { p.type = 'password'; icon.src = EYEOPEN; }
+            const val = p.value;  // save value before type change (Chrome clears autofill on type change)
+            if (p.type === 'password') { p.type = 'text'; icon.src = EYECLOSED; }
+            else { p.type = 'password'; icon.src = EYEOPEN; }
+            p.value = val;  // restore value
         }
         async function processAuth() {
             const user = document.getElementById('login-username').value.trim().toLowerCase();
@@ -8295,10 +8309,14 @@ function drawMinimap() {
             db.ref('chats/' + currentChatId).off();
             LC.fb('section-chat', db.ref('chats/' + currentChatId), 'child_added', snap => {
                 const d = snap.val(), id = snap.key, div = document.createElement('div'); div.id = 'msg-' + id;
-                const isMine = d.sender === mn; div.className = 'message ' + (isMine ? 'msg-sent' : 'msg-received');
-                if (!isMine && !d.read) db.ref('chats/' + currentChatId + '/' + id).update({ read: true });
+                const isSystem = d.sender === '_system';
+                const isMine = !isSystem && d.sender === mn;
+                div.className = 'message ' + (isSystem ? 'msg-system' : isMine ? 'msg-sent' : 'msg-received');
+                if (!isSystem && !isMine && !d.read) db.ref('chats/' + currentChatId + '/' + id).update({ read: true });
                 const sh = isMine ? `<span class="msg-status ${d.read ? 'tick-read' : 'tick-sent'}">&#10003;&#10003;</span>` : '';
-                div.innerHTML = `<span>${d.text}</span><span class="msg-time">${fmtTime(d.timestamp)} ${sh}</span>`;
+                div.innerHTML = isSystem
+                    ? `<span style="color:#888;font-style:italic;font-size:0.82rem;">📢 ${d.text}</span>`
+                    : `<span>${d.text}</span><span class="msg-time">${fmtTime(d.timestamp)} ${sh}</span>`;
                 mc.appendChild(div); requestAnimationFrame(() => { mc.scrollTop = mc.scrollHeight; });
             });
             LC.fb('section-chat', db.ref('chats/' + currentChatId), 'child_changed', snap => {
