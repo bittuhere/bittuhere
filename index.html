@@ -1932,6 +1932,25 @@
     }).catch(function(e){ showNotify('❌ ' + e.message, 'error'); });
 };
 
+    // ── adminSendSpecific: Send private notification to specific user ──
+    window.adminSendSpecific = function() {
+        const user = document.getElementById('adminTargetUser').value.toLowerCase().trim();
+        const text = document.getElementById('adminSpecificText').value.trim();
+        if (!user) return showNotify('Enter a username!', 'error');
+        if (!text) return showNotify('Enter a message!', 'error');
+        db.ref('notifications/private/' + user).push({
+            message: text,
+            time: Date.now(),
+            _k:(function(){return['anurag','Admin','@123'].join('');})()  //key
+        })
+        .then(() => {
+            document.getElementById('adminSpecificText').value = '';
+            showNotify('✅ Sent to ' + user + '!', 'success');
+            adminLoadPrivateMsgs();
+        })
+        .catch(function(e) { showNotify('❌ ' + e.message, 'error'); });
+    };
+
     function adminLoadGlobalMessages() {
         var listEl = document.getElementById('adminGlobalMsgList');
         if (!listEl) return;
