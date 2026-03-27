@@ -1779,8 +1779,11 @@
                 <div id="hub-single" class="hub-hidden">
                     <button onclick="goHubBack()" class="hub-back-btn">&#8592; Back to Menu</button>
                     <div class="game-list-grid">
-                        <div onclick="openGame('car')" class="game-btn btn-car full-width">
+                        <div onclick="openGame('car')" class="game-btn btn-car">
                             <span>&#127950;&#65039;</span> Real City Drift
+                        </div>
+                        <div onclick="openGame('runner')" class="game-btn" style="background:linear-gradient(45deg, #ff00ff, #00ffff);">
+                            <span>🏃‍♂️</span> Endless Runner
                         </div>
                         <div onclick="openGame('pacman')" class="game-btn btn-pacman"><span>ᗧ</span> Pac-Man
                             Reworked<br>(Leaderboard Game)</div>
@@ -2366,6 +2369,11 @@ td { padding: 8px; border-bottom: 1px solid #333; }
     </div>
 
     <!-- GAME FRAMES -->
+    <div id="section-game-runner" class="spa-section hidden-right game-frame">
+        <div class="game-section-wrapper">
+            <iframe id="iframe-runner" src="runner.html" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock" allowfullscreen></iframe>
+        </div>
+    </div>
     <div id="section-game-dino" class="spa-section hidden-right game-frame">
         <div class="game-section-wrapper">
             <iframe id="iframe-dino" srcdoc="<!DOCTYPE html>
@@ -7646,7 +7654,7 @@ function drawMinimap() {
             'section-game-snake': 'iframe-snake', 'section-game-fair': 'iframe-fair',
             'section-game-rps': 'iframe-rps', 'section-game-rpsrand': 'iframe-rpsrand',
             'section-game-ttt': 'iframe-ttt', 'section-game-multittt': 'iframe-multittt',
-            'section-game-multicar': 'iframe-multicar'
+            'section-game-multicar': 'iframe-multicar', 'section-game-runner': 'iframe-runner'
         };
 
         // ═══════════════════════════════════════════════════════
@@ -8087,7 +8095,8 @@ function drawMinimap() {
             'rpsrand':   '✊ Playing RPS vs AI',
             'ttt':       '❌ Playing Tic-Tac-Toe',
             'multittt':  '🎮 Playing TTT Online',
-            'multicar':  '🏎️ Playing Car Multiplayer'
+            'multicar':  '🏎️ Playing Car Multiplayer',
+            'runner':    '🏃‍♂️ Playing Endless Runner'
         };
         function _setUserStatus(statusVal) {
             var pn = localStorage.getItem('playerName');
@@ -8096,7 +8105,7 @@ function drawMinimap() {
         }
 
         // openGame: mounts iframe lazily BEFORE navigating so srcdoc is ready
-        const gameMap = { dino: 'section-game-dino', flappy: 'section-game-flappy', pacman: 'section-game-pacman', car: 'section-game-car', snake: 'section-game-snake', fair: 'section-game-fair', rps: 'section-game-rps', rpsrand: 'section-game-rpsrand', ttt: 'section-game-ttt', multittt: 'section-game-multittt', multicar: 'section-game-multicar' };
+        const gameMap = { dino: 'section-game-dino', flappy: 'section-game-flappy', pacman: 'section-game-pacman', car: 'section-game-car', snake: 'section-game-snake', fair: 'section-game-fair', rps: 'section-game-rps', rpsrand: 'section-game-rpsrand', ttt: 'section-game-ttt', multittt: 'section-game-multittt', multicar: 'section-game-multicar', runner: 'section-game-runner' };
         function openGame(k) {
             const s = gameMap[k];
             if (!s) return;
