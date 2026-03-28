@@ -22,6 +22,23 @@
         #spabk:hover { background: #00f3ff; color: #000; transform: scale(1.05); }
         #spabk:active { transform: scale(0.95); }
 
+        #mute-btn {
+            position: fixed; top: 10px; right: 10px; z-index: 99999;
+            background: rgba(0,0,0,0.8); color: #fff; border: 1px solid #fff;
+            padding: 8px; border-radius: 50%; cursor: pointer; width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; transition: all 0.2s;
+        }
+        #mute-btn:hover { background: #fff; color: #000; }
+
+        #toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px;
+            border-radius: 20px; border: 2px solid #e74c3c; font-weight: bold;
+            z-index: 99999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #toast.show { opacity: 1; }
+
         /* MENU SYSTEM */
         .menu-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -158,6 +175,8 @@
 </head>
 <body>
     <button id="spabk" onclick="window.parent.postMessage('spa-back','*')">← Hub</button>
+    <button id="mute-btn" onclick="toggleMute()">🔊</button>
+    <div id="toast"></div>
 
     <!-- UI Menus -->
     <div id="menu-main" class="menu-screen">
@@ -248,9 +267,23 @@
     </div>
 
     <script>
-        // --- SOUNDS (Using short synthesized beeps to avoid external assets) ---
+        // --- UI & SOUNDS (Using short synthesized beeps to avoid external assets) ---
+        let isMuted = false;
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playTone(freq, type, duration, vol=0.1) {
+            if(isMuted) return;
             if(audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -430,6 +463,9 @@
         let cellSize = 0;
         let gameState = null;
 
+        const offScreenCanvas = document.createElement('canvas');
+        const offScreenCtx = offScreenCanvas.getContext('2d');
+
         // Path definitions for 0-51 global track
         // Red start: 0, Green start: 13, Yellow start: 26, Blue start: 39
         // Safe zones: 0, 8, 13, 21, 26, 34, 39, 47
@@ -449,8 +485,13 @@
             canvas.style.height = boardSize + "px";
             ctx.scale(dpr, dpr);
 
+            offScreenCanvas.width = canvas.width;
+            offScreenCanvas.height = canvas.height;
+            offScreenCtx.scale(dpr, dpr);
+
             cellSize = boardSize / 15;
             if(gameState) {
+                drawStaticBoard();
                 drawBoard();
                 positionDice();
             }
@@ -460,13 +501,18 @@
         function initGameUI() {
             document.getElementById('game-layout').style.display = 'flex';
 
-            // Setup HUDs
+            // Setup HUDs with SVGs
             for(let i=0; i<4; i++) {
                 const hud = document.getElementById(`hud-${i}`);
                 if(gameState.players[i].active) {
                     hud.style.display = 'flex';
                     hud.style.backgroundColor = gameState.players[i].hex;
-                    hud.innerText = gameState.players[i].isAI ? 'CPU' : (gameState.mode === 'pvp' ? `P${i+1}` : 'YOU');
+
+                    if (gameState.players[i].isAI) {
+                        hud.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>`;
+                    } else {
+                        hud.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+                    }
                 } else {
                     hud.style.display = 'none';
                 }
@@ -496,12 +542,12 @@
         }
 
         // --- DRAWING THE BOARD (CTX) ---
-        function drawBoard() {
-            ctx.clearRect(0, 0, boardSize, boardSize);
+        function drawStaticBoard() {
+            offScreenCtx.clearRect(0, 0, boardSize, boardSize);
 
             // Background Wood Texture Color
-            ctx.fillStyle = '#fdfbf7';
-            ctx.fillRect(0, 0, boardSize, boardSize);
+            offScreenCtx.fillStyle = '#fdfbf7';
+            offScreenCtx.fillRect(0, 0, boardSize, boardSize);
 
             // Draw Bases (6x6 cells each corner)
             drawBase(0, 0, boardSize - cellSize*6, gameState.players[0].hex, 0); // Red - BL
@@ -514,6 +560,11 @@
 
             // Draw Tracks
             drawTracks();
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, boardSize, boardSize);
+            ctx.drawImage(offScreenCanvas, 0, 0, offScreenCanvas.width / (window.devicePixelRatio || 1), offScreenCanvas.height / (window.devicePixelRatio || 1));
 
             // Draw Tokens
             drawAllTokens();
@@ -524,16 +575,16 @@
             let bx = pIdx === 0 || pIdx === 3 ? 0 : boardSize - cellSize*6;
             let currentBy = pIdx === 0 || pIdx === 1 ? boardSize - cellSize*6 : 0;
 
-            ctx.fillStyle = color;
-            ctx.fillRect(bx, currentBy, cellSize*6, cellSize*6);
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(bx, currentBy, cellSize*6, cellSize*6);
+            offScreenCtx.fillStyle = color;
+            offScreenCtx.fillRect(bx, currentBy, cellSize*6, cellSize*6);
+            offScreenCtx.strokeStyle = '#000';
+            offScreenCtx.lineWidth = 2;
+            offScreenCtx.strokeRect(bx, currentBy, cellSize*6, cellSize*6);
 
             // Inner white box
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(bx + cellSize, currentBy + cellSize, cellSize*4, cellSize*4);
-            ctx.strokeRect(bx + cellSize, currentBy + cellSize, cellSize*4, cellSize*4);
+            offScreenCtx.fillStyle = '#fff';
+            offScreenCtx.fillRect(bx + cellSize, currentBy + cellSize, cellSize*4, cellSize*4);
+            offScreenCtx.strokeRect(bx + cellSize, currentBy + cellSize, cellSize*4, cellSize*4);
 
             // Token circles
             const positions = [
@@ -544,49 +595,42 @@
             ];
 
             positions.forEach((pos, i) => {
-                ctx.beginPath();
-                ctx.arc(pos.x, pos.y, cellSize*0.6, 0, Math.PI*2);
-                ctx.fillStyle = '#ddd';
-                ctx.fill();
-                ctx.stroke();
-
-                // Draw token if in base
-                if(gameState && gameState.players[pIdx].active && gameState.players[pIdx].tokens[i].pos === -1) {
-                    if (gameState.players[pIdx].tokens[i] !== animatingToken) {
-                        drawToken(pos.x, pos.y, color);
-                    }
-                }
+                offScreenCtx.beginPath();
+                offScreenCtx.arc(pos.x, pos.y, cellSize*0.6, 0, Math.PI*2);
+                offScreenCtx.fillStyle = '#ddd';
+                offScreenCtx.fill();
+                offScreenCtx.stroke();
             });
         }
 
         function drawCenterHome() {
-            ctx.beginPath();
-            ctx.moveTo(cellSize*6, cellSize*6);
-            ctx.lineTo(cellSize*7.5, cellSize*7.5);
-            ctx.lineTo(cellSize*6, cellSize*9);
-            ctx.fillStyle = gameState.players[3].hex; // Blue
-            ctx.fill(); ctx.stroke();
+            offScreenCtx.beginPath();
+            offScreenCtx.moveTo(cellSize*6, cellSize*6);
+            offScreenCtx.lineTo(cellSize*7.5, cellSize*7.5);
+            offScreenCtx.lineTo(cellSize*6, cellSize*9);
+            offScreenCtx.fillStyle = gameState.players[3].hex; // Blue
+            offScreenCtx.fill(); offScreenCtx.stroke();
 
-            ctx.beginPath();
-            ctx.moveTo(cellSize*6, cellSize*9);
-            ctx.lineTo(cellSize*7.5, cellSize*7.5);
-            ctx.lineTo(cellSize*9, cellSize*9);
-            ctx.fillStyle = gameState.players[0].hex; // Red
-            ctx.fill(); ctx.stroke();
+            offScreenCtx.beginPath();
+            offScreenCtx.moveTo(cellSize*6, cellSize*9);
+            offScreenCtx.lineTo(cellSize*7.5, cellSize*7.5);
+            offScreenCtx.lineTo(cellSize*9, cellSize*9);
+            offScreenCtx.fillStyle = gameState.players[0].hex; // Red
+            offScreenCtx.fill(); offScreenCtx.stroke();
 
-            ctx.beginPath();
-            ctx.moveTo(cellSize*9, cellSize*9);
-            ctx.lineTo(cellSize*7.5, cellSize*7.5);
-            ctx.lineTo(cellSize*9, cellSize*6);
-            ctx.fillStyle = gameState.players[1].hex; // Green
-            ctx.fill(); ctx.stroke();
+            offScreenCtx.beginPath();
+            offScreenCtx.moveTo(cellSize*9, cellSize*9);
+            offScreenCtx.lineTo(cellSize*7.5, cellSize*7.5);
+            offScreenCtx.lineTo(cellSize*9, cellSize*6);
+            offScreenCtx.fillStyle = gameState.players[1].hex; // Green
+            offScreenCtx.fill(); offScreenCtx.stroke();
 
-            ctx.beginPath();
-            ctx.moveTo(cellSize*9, cellSize*6);
-            ctx.lineTo(cellSize*7.5, cellSize*7.5);
-            ctx.lineTo(cellSize*6, cellSize*6);
-            ctx.fillStyle = gameState.players[2].hex; // Yellow
-            ctx.fill(); ctx.stroke();
+            offScreenCtx.beginPath();
+            offScreenCtx.moveTo(cellSize*9, cellSize*6);
+            offScreenCtx.lineTo(cellSize*7.5, cellSize*7.5);
+            offScreenCtx.lineTo(cellSize*6, cellSize*6);
+            offScreenCtx.fillStyle = gameState.players[2].hex; // Yellow
+            offScreenCtx.fill(); offScreenCtx.stroke();
         }
 
         // Coordinate mapping for track 0-51
@@ -619,27 +663,27 @@
         }
 
         function drawTracks() {
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#2c3e50';
+            offScreenCtx.lineWidth = 1;
+            offScreenCtx.strokeStyle = '#2c3e50';
 
             // Draw all 52 global cells
             for(let i=0; i<52; i++) {
                 const c = getCellCoords(i);
-                ctx.fillStyle = '#ffffff';
+                offScreenCtx.fillStyle = '#ffffff';
 
                 // Texture overlay for normal cells
                 let isStart = [0, 13, 26, 39].includes(i);
 
                 if(safeZones.includes(i)) {
-                    if(i===0) ctx.fillStyle = gameState.players[0].hex; // Red start (Bottom)
-                    else if(i===13) ctx.fillStyle = gameState.players[3].hex; // Blue start (Left)
-                    else if(i===26) ctx.fillStyle = gameState.players[2].hex; // Yellow start (Top)
-                    else if(i===39) ctx.fillStyle = gameState.players[1].hex; // Green start (Right)
-                    else ctx.fillStyle = '#bdc3c7'; // Star safe zone
+                    if(i===0) offScreenCtx.fillStyle = gameState.players[0].hex; // Red start (Bottom)
+                    else if(i===13) offScreenCtx.fillStyle = gameState.players[3].hex; // Blue start (Left)
+                    else if(i===26) offScreenCtx.fillStyle = gameState.players[2].hex; // Yellow start (Top)
+                    else if(i===39) offScreenCtx.fillStyle = gameState.players[1].hex; // Green start (Right)
+                    else offScreenCtx.fillStyle = '#bdc3c7'; // Star safe zone
                 }
 
-                ctx.fillRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
-                ctx.strokeRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
+                offScreenCtx.fillRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
+                offScreenCtx.strokeRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
 
                 // Add arrow for starts
                 if (isStart) {
@@ -657,12 +701,12 @@
             for(let p=0; p<4; p++) {
                 for(let h=0; h<5; h++) {
                     const c = getHomeCoords(p, h);
-                    let grad = ctx.createLinearGradient(c.x*cellSize, c.y*cellSize, c.x*cellSize + cellSize, c.y*cellSize + cellSize);
+                    let grad = offScreenCtx.createLinearGradient(c.x*cellSize, c.y*cellSize, c.x*cellSize + cellSize, c.y*cellSize + cellSize);
                     grad.addColorStop(0, shadeColor(gameState.players[p].hex, 20));
                     grad.addColorStop(1, gameState.players[p].hex);
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
-                    ctx.strokeRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
+                    offScreenCtx.fillStyle = grad;
+                    offScreenCtx.fillRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
+                    offScreenCtx.strokeRect(c.x*cellSize, c.y*cellSize, cellSize, cellSize);
                 }
             }
         }
@@ -670,52 +714,52 @@
         function drawArrow(cx, cy, posIndex) {
             let px = cx * cellSize + cellSize/2;
             let py = cy * cellSize + cellSize/2;
-            ctx.save();
-            ctx.translate(px, py);
-            if(posIndex === 0) ctx.rotate(0); // Red (up)
-            else if(posIndex === 13) ctx.rotate(Math.PI/2); // Blue (right)
-            else if(posIndex === 26) ctx.rotate(Math.PI); // Yellow (down)
-            else if(posIndex === 39) ctx.rotate(-Math.PI/2); // Green (left)
+            offScreenCtx.save();
+            offScreenCtx.translate(px, py);
+            if(posIndex === 0) offScreenCtx.rotate(0); // Red (up)
+            else if(posIndex === 13) offScreenCtx.rotate(Math.PI/2); // Blue (right)
+            else if(posIndex === 26) offScreenCtx.rotate(Math.PI); // Yellow (down)
+            else if(posIndex === 39) offScreenCtx.rotate(-Math.PI/2); // Green (left)
 
-            ctx.beginPath();
-            ctx.moveTo(-cellSize*0.2, cellSize*0.1);
-            ctx.lineTo(0, -cellSize*0.2);
-            ctx.lineTo(cellSize*0.2, cellSize*0.1);
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.fill();
-            ctx.restore();
+            offScreenCtx.beginPath();
+            offScreenCtx.moveTo(-cellSize*0.2, cellSize*0.1);
+            offScreenCtx.lineTo(0, -cellSize*0.2);
+            offScreenCtx.lineTo(cellSize*0.2, cellSize*0.1);
+            offScreenCtx.fillStyle = 'rgba(0,0,0,0.2)';
+            offScreenCtx.fill();
+            offScreenCtx.restore();
         }
 
         function drawStar(cx, cy, spikes, outerRadius, innerRadius, color) {
             let rot = Math.PI / 2 * 3;
             let x = cx, y = cy, step = Math.PI / spikes;
 
-            ctx.save();
+            offScreenCtx.save();
             // Star shadow
-            ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetY = 2;
+            offScreenCtx.shadowColor = 'rgba(0,0,0,0.3)';
+            offScreenCtx.shadowBlur = 4;
+            offScreenCtx.shadowOffsetY = 2;
 
-            ctx.beginPath();
-            ctx.moveTo(cx, cy - outerRadius)
+            offScreenCtx.beginPath();
+            offScreenCtx.moveTo(cx, cy - outerRadius)
             for (let i = 0; i < spikes; i++) {
                 x = cx + Math.cos(rot) * outerRadius;
                 y = cy + Math.sin(rot) * outerRadius;
-                ctx.lineTo(x, y)
+                offScreenCtx.lineTo(x, y)
                 rot += step
                 x = cx + Math.cos(rot) * innerRadius;
                 y = cy + Math.sin(rot) * innerRadius;
-                ctx.lineTo(x, y)
+                offScreenCtx.lineTo(x, y)
                 rot += step
             }
-            ctx.lineTo(cx, cy - outerRadius)
-            ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.restore();
+            offScreenCtx.lineTo(cx, cy - outerRadius)
+            offScreenCtx.closePath();
+            offScreenCtx.fillStyle = color;
+            offScreenCtx.fill();
+            offScreenCtx.strokeStyle = 'rgba(255,255,255,0.4)';
+            offScreenCtx.lineWidth = 1;
+            offScreenCtx.stroke();
+            offScreenCtx.restore();
         }
 
         function drawToken(x, y, color, shadowScale = 1, scale = 1) {
@@ -777,19 +821,36 @@
 
             gameState.players.forEach((p, pIdx) => {
                 if(!p.active) return;
-                p.tokens.forEach(t => {
+
+                // Draw base tokens
+                let bx = pIdx === 0 || pIdx === 3 ? 0 : boardSize - cellSize*6;
+                let currentBy = pIdx === 0 || pIdx === 1 ? boardSize - cellSize*6 : 0;
+                const positions = [
+                    {x: bx + cellSize*2, y: currentBy + cellSize*2},
+                    {x: bx + cellSize*4, y: currentBy + cellSize*2},
+                    {x: bx + cellSize*2, y: currentBy + cellSize*4},
+                    {x: bx + cellSize*4, y: currentBy + cellSize*4}
+                ];
+
+                p.tokens.forEach((t, i) => {
                     if (t === animatingToken && t.animX != null && t.animY != null) {
                         animatingData = { t: t, color: p.hex };
                         return; // Skip normal drawing
                     }
 
-                    if(t.pos >= 0 && t.pos < 100) {
+                    if (t.pos === -1) {
+                        drawToken(positions[i].x, positions[i].y, p.hex);
+                    } else if(t.pos >= 0 && t.pos < 100) {
                         if(!posMap[t.pos]) posMap[t.pos] = [];
                         posMap[t.pos].push({pIdx, color: p.hex});
                     } else if (t.pos >= 100 && t.pos < 105) {
                         const hKey = `h_${pIdx}_${t.pos}`;
                         if(!posMap[hKey]) posMap[hKey] = [];
                         posMap[hKey].push({pIdx, color: p.hex});
+                    } else if (t.pos === 999) {
+                        const dKey = `d_${pIdx}_${t.pos}`;
+                        if(!posMap[dKey]) posMap[dKey] = [];
+                        posMap[dKey].push({pIdx, color: p.hex});
                     }
                 });
             });
@@ -801,9 +862,13 @@
                 if(key.startsWith('h_')) {
                     const parts = key.split('_');
                     coords = getHomeCoords(parseInt(parts[1]), parseInt(parts[2]) - 100);
+                } else if(key.startsWith('d_')) {
+                    continue; // skip drawing home elements here, we draw them below
                 } else {
                     coords = getCellCoords(parseInt(key));
                 }
+
+                if(!coords) continue; // skip if invalid coords
 
                 const cx = coords.x * cellSize + cellSize/2;
                 const cy = coords.y * cellSize + cellSize/2;
@@ -811,23 +876,52 @@
                 if(toks.length === 1) {
                     drawToken(cx, cy, toks[0].color);
                 } else {
-                    // Overlap drawing (mini tokens)
-                    const offset = cellSize*0.2;
-                    toks.forEach((t, i) => {
-                        let ox = cx, oy = cy;
-                        if(i===0) { ox-=offset; oy-=offset; }
-                        else if(i===1) { ox+=offset; oy-=offset; }
-                        else if(i===2) { ox-=offset; oy+=offset; }
-                        else if(i===3) { ox+=offset; oy+=offset; }
+                    // Overlap drawing: draw one token and write number on it
+                    // Find majority color or just use first one
+                    const mainColor = toks[0].color;
+                    drawToken(cx, cy, mainColor);
 
-                        ctx.save();
-                        // Scale down context to draw smaller token
-                        ctx.translate(ox, oy);
-                        ctx.scale(0.6, 0.6);
-                        drawToken(0, 0, t.color);
-                        ctx.restore();
-                    });
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `bold ${cellSize*0.4}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('x' + toks.length, cx, cy);
                 }
+            }
+
+            // Draw center home tokens (pos 999)
+            // Center of the board is at 7.5 * cellSize, 7.5 * cellSize
+            // Each player's home section is a triangle
+            const cx = 7.5 * cellSize;
+            const cy = 7.5 * cellSize;
+            for(let key in posMap) {
+                if(!key.startsWith('d_')) continue;
+                const toks = posMap[key];
+                const parts = key.split('_');
+                const pIdx = parseInt(parts[1]);
+
+                // Determine placement angle/position based on player index
+                // 0: Red (bottom triangle), 1: Green (right triangle), 2: Yellow (top triangle), 3: Blue (left triangle)
+                let offsetX = 0;
+                let offsetY = 0;
+
+                toks.forEach((t, i) => {
+                    if (pIdx === 0) { // Red - Bottom
+                        offsetX = (i - (toks.length - 1)/2) * (cellSize*0.3);
+                        offsetY = cellSize*1.0;
+                    } else if (pIdx === 1) { // Green - Right
+                        offsetX = cellSize*1.0;
+                        offsetY = (i - (toks.length - 1)/2) * (cellSize*0.3);
+                    } else if (pIdx === 2) { // Yellow - Top
+                        offsetX = (i - (toks.length - 1)/2) * (cellSize*0.3);
+                        offsetY = -cellSize*1.0;
+                    } else if (pIdx === 3) { // Blue - Left
+                        offsetX = -cellSize*1.0;
+                        offsetY = (i - (toks.length - 1)/2) * (cellSize*0.3);
+                    }
+
+                    drawToken(cx + offsetX, cy + offsetY, t.color, 1, 0.6); // draw smaller tokens
+                });
             }
 
             if (animatingData) {
@@ -1041,7 +1135,8 @@
 
             if(validTokens.length === 0) {
                 // No valid moves
-                setTimeout(nextTurn, 500);
+                showToast("No Valid Move - Turn Skipped");
+                setTimeout(nextTurn, 1000);
             } else if(validTokens.length === 1 && p.isAI) {
                 // Auto move AI
                 moveToken(validTokens[0]);
