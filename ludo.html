@@ -266,12 +266,12 @@
             <div id="hud-1" class="player-hud" style="display:none;">P2</div>
             <div id="hud-2" class="player-hud" style="display:none;">P3</div>
             <div id="hud-3" class="player-hud" style="display:none;">P4</div>
-        </div>
 
-        <!-- Dice Zone -->
-        <div id="dice-zone">
-            <div id="turn-indicator">Player Turn</div>
-            <div id="dice-container" onclick="rollDiceClick()"></div>
+            <!-- Dice Zone -->
+            <div id="dice-zone">
+                <div id="turn-indicator">Player Turn</div>
+                <div id="dice-container" onclick="rollDiceClick()"></div>
+            </div>
         </div>
     </div>
 
@@ -336,9 +336,12 @@
         function selectColor(c) {
             sfx.click();
             gameConfig.playerColor = c;
-            document.querySelectorAll('.color-box').forEach((el, i) => {
-                if(i === c) el.classList.add('selected');
-                else el.classList.remove('selected');
+            // Update all color-box groups to stay in sync (AI and PvP menus)
+            document.querySelectorAll('.color-selector').forEach(selector => {
+                selector.querySelectorAll('.color-box').forEach((box, index) => {
+                     if (index === c) box.classList.add('selected');
+                     else box.classList.remove('selected');
+                });
             });
         }
 
@@ -409,46 +412,44 @@
             };
 
             // Setup players based on count
-            // Colors: 0=Red(BL), 1=Green(BR), 2=Yellow(TR), 3=Blue(TL)
-            // Ludo King order typically: Red->Green->Yellow->Blue
-            const colors = ['Red', 'Green', 'Yellow', 'Blue'];
-            const hexColors = ['#e74c3c', '#2ecc71', '#f1c40f', '#3498db'];
+            // Positions: 0=Bottom-Left, 1=Bottom-Right, 2=Top-Right, 3=Top-Left
+            // Ludo King order: Red->Green->Yellow->Blue
+            const baseColors = ['Red', 'Green', 'Yellow', 'Blue'];
+            const baseHexColors = ['#e74c3c', '#2ecc71', '#f1c40f', '#3498db'];
+
+            // Map colors sequentially starting from the user's choice assigned to Player 0
+            const mappedColors = [];
+            const mappedHexColors = [];
+            for (let i = 0; i < 4; i++) {
+                const colorIdx = (gameConfig.playerColor + i) % 4;
+                mappedColors.push(baseColors[colorIdx]);
+                mappedHexColors.push(baseHexColors[colorIdx]);
+            }
 
             for(let i=0; i<4; i++) {
                 let isActive = false;
 
-                if (gameConfig.mode === 'ai') {
-                    // Always make the user's color active
-                    if (i === gameConfig.playerColor) {
-                        isActive = true;
-                    } else if (gameConfig.playerCount === 2) {
-                        // For 2P, pick the opposite color for AI
-                        isActive = (i === (gameConfig.playerColor + 2) % 4);
-                    } else if (gameConfig.playerCount === 3) {
-                        // For 3P, pick user + next two colors
-                        isActive = (i === gameConfig.playerColor || i === (gameConfig.playerColor + 1) % 4 || i === (gameConfig.playerColor + 2) % 4);
-                    } else {
-                        // 4P
-                        isActive = true;
-                    }
+                // Player 0 (Bottom-Left) is ALWAYS the human player/Player 1
+                if (i === 0) {
+                    isActive = true;
+                } else if (gameConfig.playerCount === 2) {
+                    // For 2P, pick the opposite position (Player 2 at Top-Right)
+                    isActive = (i === 2);
+                } else if (gameConfig.playerCount === 3) {
+                    // For 3P, pick 0, 1, 2
+                    isActive = (i === 0 || i === 1 || i === 2);
                 } else {
-                    // PvP
-                    if(gameConfig.playerCount === 2) {
-                        isActive = (i === gameConfig.playerColor || i === (gameConfig.playerColor + 2) % 4); // Opposites
-                    } else if(gameConfig.playerCount === 3) {
-                        isActive = (i === gameConfig.playerColor || i === (gameConfig.playerColor + 1) % 4 || i === (gameConfig.playerColor + 2) % 4);
-                    } else {
-                        isActive = true;
-                    }
+                    // 4P
+                    isActive = true;
                 }
 
                 let isAI = false;
-                if(gameConfig.mode === 'ai' && isActive && i !== gameConfig.playerColor) isAI = true;
+                if(gameConfig.mode === 'ai' && isActive && i !== 0) isAI = true;
 
                 gameState.players.push({
                     id: i,
-                    name: colors[i],
-                    hex: hexColors[i],
+                    name: mappedColors[i],
+                    hex: mappedHexColors[i],
                     active: isActive,
                     isAI: isAI,
                     tokens: [
@@ -461,11 +462,8 @@
                 });
             }
 
-            // Set first turn to the selected player color, or find the next active player
-            gameState.turn = gameConfig.playerColor;
-            while(!gameState.players[gameState.turn].active) {
-                gameState.turn = (gameState.turn + 1) % 4;
-            }
+            // Set first turn to Player 0
+            gameState.turn = 0;
 
             initGameUI();
         }
@@ -1044,23 +1042,26 @@
             }
 
             // Dynamic Dice Placement based on active HUD position
-            // 0: Red(BL), 1: Green(BR), 2: Yellow(TR), 3: Blue(TL)
-            dz.style.top = ''; dz.style.bottom = ''; dz.style.left = ''; dz.style.right = '';
+            // Positions: 0=Bottom-Left, 1=Bottom-Right, 2=Top-Right, 3=Top-Left
+            // We use fixed offsets relative to the #board-container, placing the dice
+            // near the respective player's corner.
+            dz.style.top = 'auto'; dz.style.bottom = 'auto'; dz.style.left = 'auto'; dz.style.right = 'auto';
 
-            const padding = 20;
+            const vOffset = '-75px';
+            const hOffset = '80px';
 
-            if (turn === 0) { // Bottom-Left (Red)
-                dz.style.bottom = `${padding}px`;
-                dz.style.left = `${padding}px`;
-            } else if (turn === 1) { // Bottom-Right (Green)
-                dz.style.bottom = `${padding}px`;
-                dz.style.right = `${padding}px`;
-            } else if (turn === 2) { // Top-Right (Yellow)
-                dz.style.top = `${padding}px`;
-                dz.style.right = `${padding}px`;
-            } else if (turn === 3) { // Top-Left (Blue)
-                dz.style.top = `${padding}px`;
-                dz.style.left = `${padding}px`;
+            if (turn === 0) { // Bottom-Left
+                dz.style.bottom = vOffset;
+                dz.style.left = hOffset;
+            } else if (turn === 1) { // Bottom-Right
+                dz.style.bottom = vOffset;
+                dz.style.right = hOffset;
+            } else if (turn === 2) { // Top-Right
+                dz.style.top = vOffset;
+                dz.style.right = hOffset;
+            } else if (turn === 3) { // Top-Left
+                dz.style.top = vOffset;
+                dz.style.left = hOffset;
             }
 
             setDiceFace(gameState.diceValue || 6);
