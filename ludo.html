@@ -117,12 +117,13 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin-top: 20px;
             background: rgba(0,0,0,0.5);
             padding: 10px 20px;
             border-radius: 20px;
             border: 2px solid #555;
             transition: all 0.3s;
+            position: absolute;
+            z-index: 10;
         }
 
         #turn-indicator {
@@ -222,6 +223,14 @@
 
     <div id="menu-vs-player" class="menu-screen hidden">
         <div class="title" style="font-size:2.5rem;">PASS & PLAY</div>
+
+        <h3 style="color:white; margin-bottom:10px;">Select Your Color:</h3>
+        <div class="color-selector">
+            <div class="color-box cb-red selected" onclick="selectColor(0)"></div>
+            <div class="color-box cb-green" onclick="selectColor(1)"></div>
+            <div class="color-box cb-yellow" onclick="selectColor(2)"></div>
+            <div class="color-box cb-blue" onclick="selectColor(3)"></div>
+        </div>
 
         <h3 style="color:white; margin-bottom:10px;">Players:</h3>
         <div class="btn-group" style="flex-direction:row; gap:10px; margin-bottom: 20px;">
@@ -424,9 +433,13 @@
                     }
                 } else {
                     // PvP
-                    if(gameConfig.playerCount === 2) isActive = (i === 0 || i === 2); // Opposites
-                    else if(gameConfig.playerCount === 3) isActive = (i === 0 || i === 1 || i === 2);
-                    else isActive = true;
+                    if(gameConfig.playerCount === 2) {
+                        isActive = (i === gameConfig.playerColor || i === (gameConfig.playerColor + 2) % 4); // Opposites
+                    } else if(gameConfig.playerCount === 3) {
+                        isActive = (i === gameConfig.playerColor || i === (gameConfig.playerColor + 1) % 4 || i === (gameConfig.playerColor + 2) % 4);
+                    } else {
+                        isActive = true;
+                    }
                 }
 
                 let isAI = false;
@@ -448,7 +461,8 @@
                 });
             }
 
-            // Ensure first turn is an active player
+            // Set first turn to the selected player color, or find the next active player
+            gameState.turn = gameConfig.playerColor;
             while(!gameState.players[gameState.turn].active) {
                 gameState.turn = (gameState.turn + 1) % 4;
             }
@@ -1029,6 +1043,26 @@
                 dz.style.transform = 'scale(1)';
             }
 
+            // Dynamic Dice Placement based on active HUD position
+            // 0: Red(BL), 1: Green(BR), 2: Yellow(TR), 3: Blue(TL)
+            dz.style.top = ''; dz.style.bottom = ''; dz.style.left = ''; dz.style.right = '';
+
+            const padding = 20;
+
+            if (turn === 0) { // Bottom-Left (Red)
+                dz.style.bottom = `${padding}px`;
+                dz.style.left = `${padding}px`;
+            } else if (turn === 1) { // Bottom-Right (Green)
+                dz.style.bottom = `${padding}px`;
+                dz.style.right = `${padding}px`;
+            } else if (turn === 2) { // Top-Right (Yellow)
+                dz.style.top = `${padding}px`;
+                dz.style.right = `${padding}px`;
+            } else if (turn === 3) { // Top-Left (Blue)
+                dz.style.top = `${padding}px`;
+                dz.style.left = `${padding}px`;
+            }
+
             setDiceFace(gameState.diceValue || 6);
         }
 
@@ -1268,10 +1302,20 @@
                                 handleWin(pIdx);
                                 return;
                             }
+                            if(val === 6) extraChance = true;
+                            finishMove(extraChance);
+                            return;
                         } else {
                             // Check cut
-                            const cutHappened = checkCut(pIdx, t.pos);
-                            if(cutHappened) extraChance = true;
+                            const cutHappened = checkCut(pIdx, t.pos, () => {
+                                if(val === 6) extraChance = true;
+                                finishMove(extraChance);
+                            });
+
+                            if (cutHappened) {
+                                extraChance = true;
+                                return; // finishMove will be called by the cut callback
+                            }
                         }
 
                         if(val === 6) extraChance = true;
@@ -1362,26 +1406,89 @@
             requestAnimationFrame(anim);
         }
 
-        function checkCut(myIdx, pos) {
+        function checkCut(myIdx, pos, onComplete) {
             if(pos >= 100) return false;
             if(safeZones.includes(pos)) return false; // Cannot cut on star
 
             let cut = false;
+            let cutToken = null;
+            let cutPlayer = null;
+
             gameState.players.forEach((p, pIdx) => {
                 if(pIdx === myIdx || !p.active) return;
                 p.tokens.forEach(t => {
                     if(t.pos === pos) {
-                        t.pos = -1; // Send back to base
                         cut = true;
-
-                        let coords = getCellCoords(pos);
-                        let cx = coords.x * cellSize + cellSize/2;
-                        let cy = coords.y * cellSize + cellSize/2;
-                        addGameParticles(cx, cy, p.hex, 'smash');
+                        cutToken = t;
+                        cutPlayer = p;
                     }
                 });
             });
-            if(cut) sfx.cut();
+
+            if (cut) {
+                sfx.cut();
+                gameState.state = 'ANIMATING'; // Lock state
+
+                // Get start coords (current pos)
+                let startCellCoords = getCellCoords(pos);
+                let startCoords = {x: startCellCoords.x * cellSize + cellSize/2, y: startCellCoords.y * cellSize + cellSize/2};
+
+                // Get target coords (base pos)
+                const pIdx = gameState.players.indexOf(cutPlayer);
+                let bx = pIdx === 0 || pIdx === 3 ? 0 : boardSize - cellSize*6;
+                let currentBy = pIdx === 0 || pIdx === 1 ? boardSize - cellSize*6 : 0;
+
+                // find which token index it is in base
+                const bIdx = cutPlayer.tokens.indexOf(cutToken);
+                const posArr = [
+                    {x: bx + cellSize*1.5, y: currentBy + cellSize*1.5},
+                    {x: bx + cellSize*4.5, y: currentBy + cellSize*1.5},
+                    {x: bx + cellSize*1.5, y: currentBy + cellSize*4.5},
+                    {x: bx + cellSize*4.5, y: currentBy + cellSize*4.5}
+                ];
+                let targetCoords = {x: posArr[bIdx].x, y: posArr[bIdx].y};
+
+                // Animate token flying back
+                animatingToken = cutToken;
+                let startTime = null;
+                const duration = 600; // ms for flight back
+
+                function anim(time) {
+                    if (!startTime) startTime = time;
+                    let progress = (time - startTime) / duration;
+                    if (progress > 1) progress = 1;
+
+                    // Ease in out
+                    let ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+                    let currX = startCoords.x + (targetCoords.x - startCoords.x) * ease;
+                    let currY = startCoords.y + (targetCoords.y - startCoords.y) * ease;
+
+                    // High parabolic arc
+                    let arcHeight = cellSize * 2.5;
+                    let hopY = -Math.sin(ease * Math.PI) * arcHeight;
+
+                    cutToken.animX = currX;
+                    cutToken.animY = currY + hopY;
+                    cutToken.shadowScale = 1 - Math.sin(ease * Math.PI) * 0.8;
+
+                    drawBoard();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(anim);
+                    } else {
+                        animatingToken = null;
+                        cutToken.animX = null;
+                        cutToken.animY = null;
+                        cutToken.shadowScale = null;
+                        cutToken.pos = -1; // Officially reset
+                        addGameParticles(targetCoords.x, targetCoords.y, cutPlayer.hex, 'smash');
+                        if (onComplete) onComplete();
+                    }
+                }
+                requestAnimationFrame(anim);
+            }
+
             return cut;
         }
 
@@ -1442,12 +1549,11 @@
             const val = gameState.diceValue;
 
             if(gameConfig.difficulty === 'normal') {
-                // Random valid move
                 moveToken(validTokens[Math.floor(Math.random() * validTokens.length)]);
                 return;
             }
 
-            // Advanced Logic (Prioritize cutting > entering home > moving out of base > safety > moving forward)
+            // Advanced Logic with Threat Detection
             let bestScore = -999;
             let bestToken = validTokens[0];
 
@@ -1455,37 +1561,82 @@
                 let score = 0;
                 const t = p.tokens[idx];
 
+                // Helper to check if a position is in danger from any enemy
+                function isInDanger(pos) {
+                    if (pos === -1 || pos >= 100 || safeZones.includes(pos)) return false;
+                    let danger = false;
+                    gameState.players.forEach((op, oIdx) => {
+                        if (oIdx !== pIdx && op.active) {
+                            op.tokens.forEach(ot => {
+                                if (ot.pos >= 0 && ot.pos < 100) {
+                                    let dist = pos - ot.pos;
+                                    if (dist < 0) dist += 52;
+                                    // If enemy is 1 to 6 spaces behind, we are in danger
+                                    if (dist > 0 && dist <= 6) {
+                                        danger = true;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    return danger;
+                }
+
                 if(t.pos === -1) {
-                    score += 50; // Good to bring out tokens
+                    score += 50; // Getting a token out is good
                 } else {
                     let targetPos;
-                    if(t.pos >= 100) targetPos = t.pos + val;
-                    else {
-                        const startPositions = [0, 39, 26, 13];
+                    const startPositions = [0, 39, 26, 13];
+                    if(t.pos >= 100) {
+                        targetPos = t.pos + val;
+                    } else {
                         let relative = t.pos - startPositions[pIdx];
                         if(relative < 0) relative += 52;
                         if(relative + val > 50) targetPos = 100 + (relative + val - 51);
                         else targetPos = (t.pos + val) % 52;
                     }
 
-                    if(targetPos === 105) score += 200; // Winning a token is best
+                    // Priority 3: Entering home / Winning
+                    if (targetPos >= 100) {
+                        score += 300;
+                        if (targetPos === 105) score += 500; // Winning is best
+                    }
 
-                    // Check if target cuts someone
+                    // Priority 2: Cutting an enemy
                     if(targetPos < 100 && !safeZones.includes(targetPos)) {
                         gameState.players.forEach((op, oIdx) => {
                             if(oIdx !== pIdx && op.active) {
                                 op.tokens.forEach(ot => {
-                                    if(ot.pos === targetPos) score += 100; // Cutting is great
+                                    if(ot.pos === targetPos) score += 400; // Cutting is very high priority
                                 });
                             }
                         });
                     }
 
-                    // Safety check (is current pos unsafe and target safe?)
-                    if(t.pos < 100 && !safeZones.includes(t.pos) && safeZones.includes(targetPos)) score += 30;
+                    // Priority 1: Escaping Danger
+                    let currentlyInDanger = isInDanger(t.pos);
+                    let targetInDanger = isInDanger(targetPos);
 
-                    // Move forward value
-                    score += 10;
+                    if (currentlyInDanger) {
+                        if (!targetInDanger || targetPos >= 100 || safeZones.includes(targetPos)) {
+                            score += 600; // Moving out of danger is the absolute highest priority (if not cutting/winning)
+                        } else {
+                            score += 200; // Moving but still in danger is better than staying, but less ideal
+                        }
+                    }
+
+                    // Moving to a safe zone (if not already escaping danger)
+                    if (targetPos < 100 && safeZones.includes(targetPos) && !currentlyInDanger) {
+                        score += 150;
+                    }
+
+                    // Priority 4: Basic forward movement
+                    // Closer to home gets slightly more points to encourage progress
+                    if (t.pos >= 0 && t.pos < 100) {
+                         let relative = t.pos - startPositions[pIdx];
+                         if(relative < 0) relative += 52;
+                         score += relative; // 0 to 50
+                    }
                 }
 
                 if(score > bestScore) {
