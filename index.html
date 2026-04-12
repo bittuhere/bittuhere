@@ -3433,6 +3433,51 @@
         .qrm-ok-btn:disabled{opacity:.35;cursor:not-allowed;}
         .qrm-countdown{font-family:Teko,sans-serif;font-size:1rem;color:#f39c12;text-align:center;margin-top:8px;}
 
+        
+        /* ── Contact File Attachment ── */
+        .contact-file-zone {
+            border: 2px dashed rgba(0,243,255,0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+            background: rgba(0,243,255,0.03);
+            margin-bottom: 6px;
+            position: relative;
+        }
+        .contact-file-zone:hover, .contact-file-zone.drag-over {
+            border-color: #00f3ff;
+            background: rgba(0,243,255,0.08);
+        }
+        .contact-file-zone input[type=file] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .contact-file-label {
+            font-size: .85rem; color: rgba(255,255,255,.5); pointer-events: none;
+        }
+        .contact-file-label span { color: #00f3ff; }
+        .contact-file-preview {
+            display: flex; align-items: center; gap: 8px; margin-top: 8px;
+            background: rgba(0,243,255,.06); border-radius: 8px;
+            padding: 8px 12px; font-size: .82rem; color: rgba(255,255,255,.7);
+        }
+        .contact-file-preview .cf-remove {
+            margin-left: auto; cursor: pointer; color: #ff3366;
+            background: none; border: none; font-size: 1rem; line-height: 1;
+        }
+        .contact-size-bar {
+            height: 4px; border-radius: 2px; background: rgba(255,255,255,.1);
+            margin-top: 8px; overflow: hidden;
+        }
+        .contact-size-bar-fill {
+            height: 100%; border-radius: 2px;
+            background: linear-gradient(90deg, #2ecc71, #00f3ff);
+            transition: width .3s, background .3s;
+        }
+        .contact-size-info {
+            font-size: .72rem; color: rgba(255,255,255,.4); margin-top: 3px; text-align: right;
+        }
         </style>
 </head>
 
@@ -3712,8 +3757,25 @@
                         <div class="form-group"><label class="form-label">Subject</label><input type="text"
                                 id="contact-subject" class="form-input" placeholder="What is this about?" required>
                         </div>
-                        <div class="form-group"><label class="form-label">Question</label><textarea id="contactMsg"
-                                class="form-textarea" required></textarea></div>
+                        <div class="form-group"><label class="form-label">Message</label><textarea id="contactMsg"
+                                class="form-textarea" oninput="contactCheckSize()" placeholder="Describe your issue or question..." required></textarea>
+                            <div class="contact-size-bar"><div class="contact-size-bar-fill" id="contact-size-fill" style="width:0%"></div></div>
+                            <div class="contact-size-info" id="contact-size-info"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Attach File <span style="color:rgba(255,255,255,.35);font-size:.72rem;">(optional · max 5 MB)</span></label>
+                            <div class="contact-file-zone" id="contact-file-zone"
+                                ondragover="contactDragOver(event)" ondragleave="contactDragLeave(event)" ondrop="contactDrop(event)">
+                                <input type="file" id="contact-file-input" accept="image/*,.pdf,.txt,.doc,.docx"
+                                    onchange="contactFileChosen(this.files[0])">
+                                <div class="contact-file-label">📎 <span>Tap to attach</span> or drag &amp; drop here</div>
+                            </div>
+                            <div id="contact-file-preview" style="display:none;" class="contact-file-preview">
+                                <span id="contact-file-name">file.pdf</span>
+                                <span id="contact-file-size" style="color:rgba(255,255,255,.4);"></span>
+                                <button type="button" class="cf-remove" onclick="contactFileRemove()" title="Remove">✕</button>
+                            </div>
+                        </div>
                         <div id="contact-status" style="min-height:20px;font-size:.9rem;margin-bottom:8px;"></div>
                         <button type="submit" class="submit-btn" id="contact-send-btn">SEND MESSAGE</button>
                     </form>
@@ -10536,27 +10598,50 @@ function disableGlobalZoom() {
         // ─── CONTACT FORM AJAX ───
         async function submitContactForm(e) {
             e.preventDefault();
-            const email = document.getElementById('contact-email').value;
-            const subject = document.getElementById('contact-subject').value;
-            const rawMsg = document.getElementById('contactMsg').value;
-            const statusEl = document.getElementById('contact-status');
-            const btn = document.getElementById('contact-send-btn');
+            const email     = document.getElementById('contact-email').value.trim();
+            const subject   = document.getElementById('contact-subject').value.trim();
+            const rawMsg    = document.getElementById('contactMsg').value.trim();
+            const statusEl  = document.getElementById('contact-status');
+            const btn       = document.getElementById('contact-send-btn');
+            const fileInput = document.getElementById('contact-file-input');
+            const file      = fileInput && fileInput.files[0] ? fileInput.files[0] : null;
+
+            // ── Size checks ─────────────────────────────────────────────
+            // FormSubmit JSON mode: text limit ~100 KB
+            // FormSubmit multipart mode (with file): file limit 5 MB
+            const MAX_TEXT_BYTES = 80 * 1024;   // 80 KB text limit (safe)
+            const MAX_FILE_BYTES = 5 * 1024 * 1024;  // 5 MB file limit
+
+            const textBytes = new TextEncoder().encode(rawMsg + subject + email).length;
+            if (textBytes > MAX_TEXT_BYTES) {
+                statusEl.style.color = '#ff3366';
+                statusEl.innerText = '❌ Message too long! Reduce text to under ~80 KB. Currently: ' +
+                    (textBytes / 1024).toFixed(1) + ' KB';
+                return;
+            }
+            if (file && file.size > MAX_FILE_BYTES) {
+                statusEl.style.color = '#ff3366';
+                statusEl.innerText = '❌ File too large! Max 5 MB allowed. Your file: ' +
+                    (file.size / 1024 / 1024).toFixed(2) + ' MB. Please remove it.';
+                // Clear the file input immediately — no upload, no data waste
+                contactFileRemove();
+                return;
+            }
+
             btn.disabled = true; btn.innerText = 'Sending...';
             statusEl.style.color = '#00f3ff'; statusEl.innerText = 'Connecting to mail server...';
 
-            // IST Timestamp (UTC+5:30)
+            // IST Timestamp
             const istTime = new Date().toLocaleString('en-IN', {
                 timeZone: 'Asia/Kolkata',
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
                 hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
             });
 
-            // Parse username from message
             const userMatch = rawMsg.match(/Username:\s*([^\n]+)/);
-            const username = userMatch ? userMatch[1].trim() : 'Unknown';
-            const cleanMsg = rawMsg.replace(/Username:[^\n]*\n[-]+\n?/, '').replace('My Question is:', '').trim();
+            const username  = userMatch ? userMatch[1].trim() : (localStorage.getItem('playerName') || 'Unknown');
+            const cleanMsg  = rawMsg.replace(/Username:[^\n]*\n[-]+\n?/, '').replace('My Question is:', '').trim();
 
-            // Plain text formatted message (works 100% with FormSubmit AJAX)
             const formattedMsg =
                 '════════════════════════════════\n' +
                 '  🎮  ARCADE HUB — Contact Form  \n' +
@@ -10564,6 +10649,7 @@ function disableGlobalZoom() {
                 '👤 Username  : ' + username + '\n' +
                 '📧 Email     : ' + email + '\n' +
                 '📋 Subject   : ' + (subject || 'General Inquiry') + '\n' +
+                '📎 File      : ' + (file ? file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)' : 'None') + '\n' +
                 '🕐 Time (IST): ' + istTime + '\n\n' +
                 '──────────────────────────────────\n' +
                 '💬 MESSAGE:\n' +
@@ -10572,29 +10658,126 @@ function disableGlobalZoom() {
                 '──────────────────────────────────\n' +
                 '🌐 bittuhere.github.io';
 
-            const prettySubject = '🎮 [Arcade Hub] ' + (subject || 'New Message') + ' — from ' + username + ' | IST: ' + istTime;
+            const prettySubject = '🎮 [Arcade Hub] ' + (subject || 'New Message') +
+                ' — from ' + username + ' | IST: ' + istTime;
 
             try {
-                const res = await fetch('https://formsubmit.co/ajax/anurag670singh@gmail.com', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({
-                        email,
-                        _subject: prettySubject,
-                        message: formattedMsg,
-                        _captcha: 'false'
-                    })
-                });
-                const data = await res.json();
+                let res;
+                if (file) {
+                    // ── Multipart send (supports file attachment) ─────────
+                    statusEl.innerText = 'Uploading file...';
+                    const fd = new FormData();
+                    fd.append('email', email);
+                    fd.append('_subject', prettySubject);
+                    fd.append('message', formattedMsg);
+                    fd.append('_captcha', 'false');
+                    fd.append('_template', 'table');
+                    fd.append('attachment', file, file.name);
+                    res = await fetch('https://formsubmit.co/anurag670singh@gmail.com', {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json' },
+                        body: fd
+                    });
+                } else {
+                    // ── JSON send (text only, faster) ─────────────────────
+                    res = await fetch('https://formsubmit.co/ajax/anurag670singh@gmail.com', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({
+                            email,
+                            _subject: prettySubject,
+                            message: formattedMsg,
+                            _captcha: 'false'
+                        })
+                    });
+                }
+
+                const data = await res.json().catch(function() { return { success: res.ok ? 'true' : 'false' }; });
                 if (data.success === 'true' || data.success === true) {
-                    statusEl.style.color = '#00ff88'; statusEl.innerText = 'Sent!';
+                    statusEl.style.color = '#00ff88';
+                    statusEl.innerText = '✅ Message sent!' + (file ? ' (with attachment)' : '');
                     document.getElementById('contact-form').reset();
-                    setTimeout(() => { startTyCountdown(); MapsTo('section-thankyou', 'right'); }, 600);
+                    contactFileRemove();
+                    contactCheckSize();
+                    setTimeout(function() { startTyCountdown(); MapsTo('section-thankyou', 'right'); }, 600);
                 } else { throw new Error('Send failed'); }
             } catch (err) {
-                statusEl.style.color = '#ff3366'; statusEl.innerText = 'Send failed. Please try again.';
+                statusEl.style.color = '#ff3366';
+                statusEl.innerText = '❌ Send failed. Please try again.';
                 btn.disabled = false; btn.innerText = 'SEND MESSAGE';
             }
+        }
+
+        // ── Contact form helper functions ────────────────────────────────
+        var _contactFile = null;
+
+        function contactFileChosen(file) {
+            if (!file) return;
+            var MAX = 5 * 1024 * 1024;
+            if (file.size > MAX) {
+                showNotify('❌ File too large! Max 5 MB. Your file: ' + (file.size/1024/1024).toFixed(2) + ' MB', 'error');
+                var inp = document.getElementById('contact-file-input');
+                if (inp) inp.value = '';
+                return;
+            }
+            _contactFile = file;
+            var prev = document.getElementById('contact-file-preview');
+            var nm   = document.getElementById('contact-file-name');
+            var sz   = document.getElementById('contact-file-size');
+            var zone = document.getElementById('contact-file-zone');
+            if (nm) nm.textContent = file.name;
+            if (sz) sz.textContent = '(' + (file.size < 1024 ? file.size + ' B' : file.size < 1048576 ? (file.size/1024).toFixed(1) + ' KB' : (file.size/1048576).toFixed(2) + ' MB') + ')';
+            if (prev) prev.style.display = 'flex';
+            if (zone) zone.style.display = 'none';
+            contactCheckSize();
+        }
+
+        function contactFileRemove() {
+            _contactFile = null;
+            var inp  = document.getElementById('contact-file-input');
+            var prev = document.getElementById('contact-file-preview');
+            var zone = document.getElementById('contact-file-zone');
+            if (inp) inp.value = '';
+            if (prev) prev.style.display = 'none';
+            if (zone) zone.style.display = 'block';
+            contactCheckSize();
+        }
+
+        function contactDragOver(e) {
+            e.preventDefault();
+            var z = document.getElementById('contact-file-zone');
+            if (z) z.classList.add('drag-over');
+        }
+        function contactDragLeave(e) {
+            var z = document.getElementById('contact-file-zone');
+            if (z) z.classList.remove('drag-over');
+        }
+        function contactDrop(e) {
+            e.preventDefault();
+            var z = document.getElementById('contact-file-zone');
+            if (z) z.classList.remove('drag-over');
+            var file = e.dataTransfer && e.dataTransfer.files[0];
+            if (file) contactFileChosen(file);
+        }
+
+        function contactCheckSize() {
+            var msg   = document.getElementById('contactMsg');
+            var fill  = document.getElementById('contact-size-fill');
+            var info  = document.getElementById('contact-size-info');
+            var MAX   = 80 * 1024; // 80 KB text limit
+            if (!msg || !fill || !info) return;
+            var bytes = new TextEncoder().encode(msg.value).length;
+            var pct   = Math.min(100, (bytes / MAX) * 100);
+            fill.style.width = pct + '%';
+            fill.style.background = pct < 60 ? 'linear-gradient(90deg,#2ecc71,#00f3ff)'
+                                  : pct < 85 ? 'linear-gradient(90deg,#f1c40f,#e67e22)'
+                                  : 'linear-gradient(90deg,#ff3366,#e74c3c)';
+            if (bytes < 1024) {
+                info.textContent = bytes + ' B / 80 KB';
+            } else {
+                info.textContent = (bytes/1024).toFixed(1) + ' KB / 80 KB';
+            }
+            info.style.color = pct >= 85 ? '#ff3366' : 'rgba(255,255,255,.4)';
         }
 
         // ─── THANK YOU SECTION ───
@@ -13025,7 +13208,7 @@ window.loadFairCopies = function() {
 
             // ── CONFIG ─────────────────────────────────────────────────────────
             // ⚠️  Update this URL after uploading quiz_questions.json to your GitHub repo
-            var QUIZ_JSON_URL = 'https://raw.githubusercontent.com/bittuhere/bittuhere.github.io/main/quiz_questions.json';
+            var QUIZ_JSON_URL = 'https://raw.githubusercontent.com/bittuhere/bittuhere.github.io/refs/heads/main/quiz_questions.json';
             var QUIZ_PER_WEEK = 20;
             var TIME_PER_Q   = 60;
             var BAN_BASE_MS  = 2 * 60 * 60 * 1000;   // 2 hrs
