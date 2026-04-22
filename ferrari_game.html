@@ -120,13 +120,20 @@ const M4 = {
   id:()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
   mul(a,b){
     const r=new Float32Array(16);
-    for(let i=0;i<4;i++)for(let j=0;j<4;j++){
-      let s=0;for(let k=0;k<4;k++)s+=a[i*4+k]*b[k*4+j];r[i*4+j]=s;}
+    for(let col=0;col<4;col++){
+      for(let row=0;row<4;row++){
+        let s=0;
+        for(let k=0;k<4;k++){
+          s += a[k*4 + row] * b[col*4 + k];
+        }
+        r[col*4 + row] = s;
+      }
+    }
     return r;
   },
   persp(fov,asp,n,f){
     const t=1/Math.tan(fov/2),nf=1/(n-f);
-    return new Float32Array([t/asp,0,0,0,0,t,0,0,0,0,(f+n)*nf,-1,0,0,2*f*n*nf,0]);
+    return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)*nf,-1, 0,0,2*f*n*nf,0]);
   },
   lookAt(ex,ey,ez,tx,ty,tz){
     let fx=tx-ex,fy=ty-ey,fz=tz-ez;
@@ -172,7 +179,7 @@ glc.width=window.innerWidth; glc.height=window.innerHeight;
 const gl=glc.getContext('webgl',{antialias:!IS_MOB,powerPreference:'high-performance'});
 if(!gl){alert('WebGL not supported');throw 0;}
 gl.enable(gl.DEPTH_TEST);
-gl.enable(gl.CULL_FACE);
+// gl.enable(gl.CULL_FACE);
 gl.cullFace(gl.BACK);
 gl.enable(gl.BLEND);
 gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
@@ -312,7 +319,7 @@ class MB{
     // Right
     this.quad([x1,y01,z0],[x1,y11,z1],[x1,y10,z1],[x1,y00,z0],[1,0,0],c);
   }
-  upload(usage=0x88b4){// STATIC_DRAW
+  upload(usage=35044){// STATIC_DRAW
     const buf=gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER,buf);
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(this.d),usage);
@@ -933,18 +940,51 @@ function render(){
 }
 
 // ── HUD ──────────────────────────────────────────────────────────────
+
 const mmCv=document.getElementById('mm-cv');
 const mmCtx=mmCv.getContext('2d');
 const MM=88;
 
+// Minimap Background Cache
+const mmBgCv=document.createElement('canvas');
+mmBgCv.width=MM; mmBgCv.height=MM;
+const mmBgCtx=mmBgCv.getContext('2d');
+mmBgCtx.fillStyle='rgba(0,0,0,.72)';
+mmBgCtx.fillRect(0,0,MM,MM);
+const hw=MM/2;
+mmBgCtx.fillStyle='#333';
+mmBgCtx.fillRect(hw-5,0,10,MM);
+mmBgCtx.fillRect(0,hw-5,MM,10);
+
+
+let lastKmh = -1;
+let lastScore = -1;
+let lastNitro = -1;
+let lastGear = -1;
+
 function drawHUD(){
   const kmh=Math.abs(carSpd*280)|0;
-  document.getElementById('spd-num').textContent=kmh;
-  document.getElementById('scv').textContent=score.toLocaleString();
-  document.getElementById('nt-bar').style.width=(nitro)+'%';
+
+  if (kmh !== lastKmh) {
+    document.getElementById('spd-num').textContent=kmh;
+    lastKmh = kmh;
+  }
+
+  if (score !== lastScore) {
+    document.getElementById('scv').textContent=score.toLocaleString();
+    lastScore = score;
+  }
+
+  if (Math.abs(nitro - lastNitro) > 0.1) {
+    document.getElementById('nt-bar').style.width=(nitro)+'%';
+    lastNitro = nitro;
+  }
 
   const gear=Math.min(5,kmh/35|0);
-  document.querySelectorAll('.gp').forEach((p,i)=>p.classList.toggle('on',i<=gear));
+  if (gear !== lastGear) {
+    document.querySelectorAll('.gp').forEach((p,i)=>p.classList.toggle('on',i<=gear));
+    lastGear = gear;
+  }
 
   fCount++;
   const now=performance.now();
@@ -959,11 +999,7 @@ function drawHUD(){
   // Minimap
   mmCtx.clearRect(0,0,MM,MM);
   const hw=MM/2;
-  mmCtx.fillStyle='rgba(0,0,0,.72)';
-  mmCtx.fillRect(0,0,MM,MM);
-  mmCtx.fillStyle='#333';
-  mmCtx.fillRect(hw-5,0,10,MM);
-  mmCtx.fillRect(0,hw-5,MM,10);
+  mmCtx.drawImage(mmBgCv,0,0);
   // Traffic
   mmCtx.fillStyle='#4488ff';
   traffic.forEach(t=>{
