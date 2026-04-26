@@ -6,6 +6,19 @@ let epkFileInput, decompileButton, repackButton, statusMessageDiv, fileListConta
   activeFile = { name: null, buffer: null, nbtParsed: null, wasGzipped: !1 },
   parsedSaveData = {};
 
+function escapeHTML(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[&<>"']/g, function(m) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[m];
+  });
+}
+
 function showStatusMessage(e, t) { statusMessageDiv ? (statusMessageDiv.textContent = e, statusMessageDiv.className = "status-message " + (t ? "status-" + t : ""), statusMessageDiv.classList.remove("hidden")) : console.warn("UI Warning: Status message div not found (ID 'status'). Cannot display status:", e) }
 
 function showMessageBox(e, t, n = "info") { messageBox && messageTitle && messageContent ? (messageTitle.textContent = e, messageContent.textContent = t, messageBox.style.display = "block") : (alert(`${e}\n\n${t}`), console.warn("UI Warning: Message box elements not fully found. Falling back to alert for message:", e)) }
@@ -25,7 +38,7 @@ function displayExtractedFiles(e) {
     let a = t.split(".").pop().toLowerCase() || "binary";
     t.includes("/") && a.length > 5 ? a = t.includes("level0/") ? "CHUNK" : "UNKNOWN" : t.endsWith(".dat_old") && (a = "DAT_OLD");
     let o = "bg-gray-600";
-    t.endsWith(".dat") && !t.endsWith(".dat_old") ? o = "bg-purple-700" : t.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/i) ? o = "bg-blue-600" : t.match(/\.(txt|json|yml|xml|html|css|js|glsl)$/i) ? o = "bg-green-600" : t.match(/\.(ogg|wav|mp3)$/i) ? o = "bg-red-600" : "CHUNK" === a && (o = "bg-orange-600"), n.innerHTML = `<span>${t}</span><span class="file-type-badge ${o}">${a.toUpperCase()}</span>`, n.addEventListener("click", (() => { selectFileForEditing(t, e) })), fileListContainer.appendChild(n)
+    t.endsWith(".dat") && !t.endsWith(".dat_old") ? o = "bg-purple-700" : t.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/i) ? o = "bg-blue-600" : t.match(/\.(txt|json|yml|xml|html|css|js|glsl)$/i) ? o = "bg-green-600" : t.match(/\.(ogg|wav|mp3)$/i) ? o = "bg-red-600" : "CHUNK" === a && (o = "bg-orange-600"), n.innerHTML = `<span>${escapeHTML(t)}</span><span class="file-type-badge ${o}">${escapeHTML(a.toUpperCase())}</span>`, n.addEventListener("click", (() => { selectFileForEditing(t, e) })), fileListContainer.appendChild(n)
   })) : fileListContainer.innerHTML = '<p class="text-gray-400 p-4 text-center">No files extracted.</p>' : console.error("UI Error: Cannot display files, fileListContainer (ID 'fileList') not found.")
 }
 
@@ -74,7 +87,7 @@ async function decryptEpk(e) {
         const g = i.getUint16(l, false);
         l += 2 + g + 8; // skip comment & padding
 
-        let f = i.getInt32(l, false); 
+        let f = i.getInt32(l, false);
         const totalFiles = f; // Percentage ke liye total count
         l += 4;
         const m = String.fromCharCode(i.getUint8(l++));
@@ -88,7 +101,7 @@ async function decryptEpk(e) {
 
         const h = new DataView(v.buffer, v.byteOffset, v.byteLength);
         let w = 0;
-        
+
         if (progressContainer) progressContainer.classList.remove('hidden');
 
         // Loop jo files extract karta hai
@@ -98,7 +111,7 @@ async function decryptEpk(e) {
             // --- PERCENTAGE LOGIC START ---
             let currentFileNum = totalFiles - f;
             let percent = Math.round((currentFileNum / totalFiles) * 100);
-            
+
             if (currentFileNum % 5 === 0) { // Har 5 file ke baad screen update
                 showStatusMessage(`Decompiling: ${percent}% (${currentFileNum}/${totalFiles} files)`, "info");
                 if (progressBar) progressBar.style.width = percent + '%';
@@ -128,7 +141,7 @@ async function decryptEpk(e) {
                 w += size;
             }
             w++; // skip '>'
-            
+
             a.set(name, fileData.buffer);
             f--;
         }
@@ -240,13 +253,13 @@ async function selectFileForEditing(e, t) {
     }
 }
 
-function renderModdingMenu(e) { moddingMenuContainer ? (moddingMenuContainer.innerHTML = `\n        <h2 class="section-header">4. Modding Menu</h2>\n        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">\n            <div class="mod-section">\n                <h3 class="text-xl font-semibold text-purple-300 mb-3">Player Stats</h3>\n                <label for="playerHealth" class="block text-sm font-medium text-gray-300">Health (0-20):</label>\n                <input type="number" id="playerHealth" value="${e.Player.value.Health?e.Player.value.Health.value:20}" min="0" max="20" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n\n                <label for="playerScore" class="block text-sm font-medium text-gray-300 mt-3">Score:</label>\n                <input type="number" id="playerScore" value="${e.Player.value.Score?e.Player.value.Score.value:0}" min="0" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n\n                <label for="playerPosX" class="block text-sm font-medium text-gray-300 mt-3">Position X:</label>\n                <input type="number" id="playerPosX" value="${e.Player.value.Pos?e.Player.value.Pos.value.value[0]:0}" step="0.01" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                <label for="playerPosY" class="block text-sm font-medium text-gray-300 mt-3">Position Y:</label>\n                <input type="number" id="playerPosY" value="${e.Player.value.Pos?e.Player.value.Pos.value.value[1]:0}" step="0.01" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                <label for="playerPosZ" class="block text-sm font-medium text-gray-300 mt-3">Position Z:</label>\n                <input type="number" id="playerPosZ" value="${e.Player.value.Pos?e.Player.value.Pos.value.value[2]:0}" step="0.01" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n\n            </div>\n\n            <div class="mod-section">\n                <h3 class="text-xl font-semibold text-purple-300 mb-3">Inventory Editor</h3>\n                <div id="inventorySlots" class="grid grid-cols-5 gap-2 bg-gray-800 p-3 rounded-md max-h-60 overflow-y-auto">\n                    </div>\n                <div class="mt-4 flex gap-2">\n                    <input type="text" id="newItemId" placeholder="minecraft:diamond" class="flex-grow rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                    <input type="number" id="newItemCount" placeholder="Count" value="1" min="1" max="64" class="w-20 rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                    <button id="addItemButton" class="button button-sm bg-green-600 hover:bg-green-700">Add Item</button>\n                </div>\n            </div>\n        </div>\n        <button id="applyModificationsButton" class="button primary-button w-full mt-6">Apply Modifications</button>\n    `, playerHealthInput = document.getElementById("playerHealth"), playerScoreInput = document.getElementById("playerScore"), playerPosXInput = document.getElementById("playerPosX"), playerPosYInput = document.getElementById("playerPosY"), playerPosZInput = document.getElementById("playerPosZ"), inventorySlotsContainer = document.getElementById("inventorySlots"), newItemIdInput = document.getElementById("newItemId"), newItemCountInput = document.getElementById("newItemCount"), addItemButton = document.getElementById("addItemButton"), applyModificationsButton = document.getElementById("applyModificationsButton"), renderInventory(e.Player.value.Inventory), addModdingMenuListeners(e)) : console.error("Modding menu container not found!") }
+function renderModdingMenu(e) { moddingMenuContainer ? (moddingMenuContainer.innerHTML = `\n        <h2 class="section-header">4. Modding Menu</h2>\n        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">\n            <div class="mod-section">\n                <h3 class="text-xl font-semibold text-purple-300 mb-3">Player Stats</h3>\n                <label for="playerHealth" class="block text-sm font-medium text-gray-300">Health (0-20):</label>\n                <input type="number" id="playerHealth" value="${escapeHTML(e.Player.value.Health?e.Player.value.Health.value:20)}" min="0" max="20" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n\n                <label for="playerScore" class="block text-sm font-medium text-gray-300 mt-3">Score:</label>\n                <input type="number" id="playerScore" value="${escapeHTML(e.Player.value.Score?e.Player.value.Score.value:0)}" min="0" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n\n                <label for="playerPosX" class="block text-sm font-medium text-gray-300 mt-3">Position X:</label>\n                <input type="number" id="playerPosX" value="${escapeHTML(e.Player.value.Pos?e.Player.value.Pos.value.value[0]:0)}" step="0.01" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                <label for="playerPosY" class="block text-sm font-medium text-gray-300 mt-3">Position Y:</label>\n                <input type="number" id="playerPosY" value="${escapeHTML(e.Player.value.Pos?e.Player.value.Pos.value.value[1]:0)}" step="0.01" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                <label for="playerPosZ" class="block text-sm font-medium text-gray-300 mt-3">Position Z:</label>\n                <input type="number" id="playerPosZ" value="${escapeHTML(e.Player.value.Pos?e.Player.value.Pos.value.value[2]:0)}" step="0.01" class="mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n\n            </div>\n\n            <div class="mod-section">\n                <h3 class="text-xl font-semibold text-purple-300 mb-3">Inventory Editor</h3>\n                <div id="inventorySlots" class="grid grid-cols-5 gap-2 bg-gray-800 p-3 rounded-md max-h-60 overflow-y-auto">\n                    </div>\n                <div class="mt-4 flex gap-2">\n                    <input type="text" id="newItemId" placeholder="minecraft:diamond" class="flex-grow rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                    <input type="number" id="newItemCount" placeholder="Count" value="1" min="1" max="64" class="w-20 rounded-md bg-gray-700 border-transparent focus:border-purple-500 focus:ring-purple-500 text-white">\n                    <button id="addItemButton" class="button button-sm bg-green-600 hover:bg-green-700">Add Item</button>\n                </div>\n            </div>\n        </div>\n        <button id="applyModificationsButton" class="button primary-button w-full mt-6">Apply Modifications</button>\n    `, playerHealthInput = document.getElementById("playerHealth"), playerScoreInput = document.getElementById("playerScore"), playerPosXInput = document.getElementById("playerPosX"), playerPosYInput = document.getElementById("playerPosY"), playerPosZInput = document.getElementById("playerPosZ"), inventorySlotsContainer = document.getElementById("inventorySlots"), newItemIdInput = document.getElementById("newItemId"), newItemCountInput = document.getElementById("newItemCount"), addItemButton = document.getElementById("addItemButton"), applyModificationsButton = document.getElementById("applyModificationsButton"), renderInventory(e.Player.value.Inventory), addModdingMenuListeners(e)) : console.error("Modding menu container not found!") }
 
 function renderInventory(e) {
   inventorySlotsContainer ? (inventorySlotsContainer.innerHTML = "", e && e.value && e.value.value && 0 !== e.value.value.length ? (e.value.value.forEach(((e, t) => {
     if (!e.id || "string" !== e.id.type || !e.Count || "byte" !== e.Count.type || !e.Slot || "byte" !== e.Slot.type) return void console.warn("Skipping malformed inventory item:", e);
     const n = document.createElement("div");
-    n.className = "relative group cursor-pointer border border-gray-600 rounded-md p-1 flex flex-col items-center justify-center text-center text-sm bg-gray-900 hover:bg-gray-700 transition duration-150 ease-in-out", n.title = `${e.Count.value}x ${e.id.value} (Slot: ${e.Slot.value})`, n.innerHTML = `\n            <span class="text-xs text-purple-300">${e.id.value.split(":")[1]||e.id.value}</span>\n            <span class="text-white text-lg font-bold">${e.Count.value}</span>\n            <button class="absolute top-0 right-0 bg-red-600 hover:bg-red-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity" data-index="${t}">✖</button>\n        `, inventorySlotsContainer.appendChild(n)
+    n.className = "relative group cursor-pointer border border-gray-600 rounded-md p-1 flex flex-col items-center justify-center text-center text-sm bg-gray-900 hover:bg-gray-700 transition duration-150 ease-in-out", n.title = `${e.Count.value}x ${e.id.value} (Slot: ${e.Slot.value})`, n.innerHTML = `\n            <span class="text-xs text-purple-300">${escapeHTML(e.id.value.split(":")[1]||e.id.value)}</span>\n            <span class="text-white text-lg font-bold">${escapeHTML(e.Count.value)}</span>\n            <button class="absolute top-0 right-0 bg-red-600 hover:bg-red-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity" data-index="${t}">✖</button>\n        `, inventorySlotsContainer.appendChild(n)
   })), inventorySlotsContainer.querySelectorAll("button").forEach((e => {
     e.onclick = e => {
       const t = parseInt(e.target.dataset.index);
