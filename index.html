@@ -5742,11 +5742,9 @@
             flashEl.style.background = &quot;rgba(255,50,50,0.6)&quot;;
             flashEl.style.opacity = &quot;0.7&quot;;
             requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    flashEl.style.transition = &quot;opacity 0.3s ease-out&quot;;
-                    flashEl.style.opacity = &quot;0&quot;;
-                    setTimeout(function() { flashEl.style.background = &quot;transparent&quot;; flashEl.style.transition = &quot;none&quot;; }, 350);
-                });
+                flashEl.style.transition = "opacity 0.3s ease-out";
+                flashEl.style.opacity = "0";
+                setTimeout(function() { flashEl.style.background = "transparent"; flashEl.style.transition = "none"; }, 350);
             });
 
             // Update Local High Score
@@ -10355,10 +10353,8 @@ window.addEventListener('load', function(){
             delete fr.dataset.mounted;
             // Double rAF: wait for blank to paint, then inject content
             requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    fr.srcdoc = _gameSrc[iid];
-                    fr.dataset.mounted = '1';
-                });
+                fr.srcdoc = _gameSrc[iid];
+                fr.dataset.mounted = '1';
             });
         }
         function _unmountGame(iid) {
@@ -10453,17 +10449,15 @@ function disableGlobalZoom() {
             tgt.classList.remove('hidden-left', 'hidden-right', 'active');
             tgt.classList.add(direction === 'right' ? 'hidden-right' : 'hidden-left');
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    cur.classList.remove('active');
-                    cur.classList.add(direction === 'right' ? 'hidden-left' : 'hidden-right');
-                    tgt.classList.remove('hidden-right', 'hidden-left');
-                    tgt.classList.add('active');
-                    if (targetId === 'section-game-fair') {
-                        checkAndLoadFair();
-                    }
-                    // Release lock after CSS transition finishes (0.32s + small buffer)
-                    LC.timer('__nav', setTimeout(() => { _navLock = false; }, 370));
-                });
+                cur.classList.remove('active');
+                cur.classList.add(direction === 'right' ? 'hidden-left' : 'hidden-right');
+                tgt.classList.remove('hidden-right', 'hidden-left');
+                tgt.classList.add('active');
+                if (targetId === 'section-game-fair') {
+                    checkAndLoadFair();
+                }
+                // Release lock after CSS transition finishes (0.32s + small buffer)
+                LC.timer('__nav', setTimeout(() => { _navLock = false; }, 370));
             });
 
             spaHistory.push(currentSection);
@@ -10516,11 +10510,9 @@ function disableGlobalZoom() {
             if (_gameIframe[currentSection]) _unmountGame(_gameIframe[currentSection]);
 
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    cur.classList.remove('active'); cur.classList.add('hidden-right');
-                    tgt.classList.remove('hidden-left', 'hidden-right'); tgt.classList.add('active');
-                    LC.timer('__nav', setTimeout(() => { _navLock = false; }, 370));
-                });
+                cur.classList.remove('active'); cur.classList.add('hidden-right');
+                tgt.classList.remove('hidden-left', 'hidden-right'); tgt.classList.add('active');
+                LC.timer('__nav', setTimeout(() => { _navLock = false; }, 370));
             });
 
             currentSection = prev;
@@ -12245,7 +12237,7 @@ function disableGlobalZoom() {
             t.innerHTML = '<span class="notify-icon">' + (icons[type] || 'ℹ️') + '</span><span class="notify-msg">' + msg + '</span>';
             cont.appendChild(t);
             requestAnimationFrame(function () {
-                requestAnimationFrame(function () { t.classList.add('nt-show'); });
+                t.classList.add('nt-show');
             });
             var dur = (type === 'error') ? 4000 : 3000;
             setTimeout(function () {
@@ -12366,8 +12358,8 @@ function disableGlobalZoom() {
 
                     function _doOpenAdmin() {
                         // Hide modal first
-                        var alm = document.getElementById('al-modal');
-                        if (alm) alm.style.display = 'none';
+                        var overlay = document.getElementById('admin-login-overlay');
+                        if (overlay) overlay.classList.remove('al-show');
                         if (pass) pass.value = '';
                         if (eEl) eEl.innerText = '';
                         // Navigate to admin panel
@@ -12882,7 +12874,7 @@ showSection('global', document.querySelector('.admin-btn'));
                 bar.classList.remove('running');
                 bar.style.width = '100%';
                 requestAnimationFrame(function () {
-                    requestAnimationFrame(function () { bar.classList.add('running'); });
+                    bar.classList.add('running');
                 });
             }
             if (_inviteTimer) clearTimeout(_inviteTimer);
@@ -14236,7 +14228,6 @@ window.loadFairCopies = function() {
                     db.ref('users/' + pn + '/quiz_played/' + _weekKey).set(true);
                     _loadLb('quiz-result-lb', function (rank) {
                         document.getElementById('quiz-res-rank').innerText = rank > 0 ? '#' + rank : '—';
-                        _awardMedals();
                     });
                 });
             }
@@ -14543,17 +14534,6 @@ window.loadFairCopies = function() {
             }, 600);
 
         })(); // end quiz IIFE
-        // For clarity, I'll provide the modified MapsTo section for you to copy/paste (only the part that changes).
-        function launchAdminEntry() {
-    // Show admin login modal
-    var alm = document.getElementById('al-modal');
-    if (alm) {
-        alm.style.display = 'flex';
-        document.getElementById('al-error').innerText = '';
-        document.getElementById('al-pass-input').value = '';
-        setTimeout(function() { document.getElementById('al-pass-input').focus(); }, 100);
-    }
-}
     </script>
 </body>
 
