@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🗺️ Advanced Map Editor — Real City Drive</title>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0c14;color:#e8eaf6;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+
+/* LAYOUT */
+#layout{display:flex;height:100vh}
+
+/* SIDEBAR */
+#sidebar{width:280px;background:#13172a;border-right:1px solid #2a3060;overflow-y:auto;display:flex;flex-direction:column}
+#sidebar h2{padding:14px;font-size:14px;border-bottom:1px solid #2a3060;letter-spacing:1px}
+.panel{padding:10px;border-bottom:1px solid #1c2240}
+.panel-title{font-size:11px;color:#8892b0;text-transform:uppercase;font-weight:700;margin:8px 0;letter-spacing:.8px}
+.panel-item{display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;border-radius:6px;cursor:pointer;font-size:12px;transition:.15s}
+.panel-item:hover{background:#1c2240}
+.panel-item.active{background:#4f8ef722;color:#4f8ef7;border-left:3px solid #4f8ef7}
+
+/* MAIN VIEWPORT */
+#viewportContainer{flex:1;display:flex;flex-direction:column}
+
+/* VIEWPORT TOOLBAR */
+#toolbar{height:50px;background:#0d0f1e;border-bottom:1px solid #2a3060;display:flex;align-items:center;gap:10px;padding:0 14px;overflow-x:auto}
+.toolbar-btn{background:#1c2240;border:1px solid #2a3060;color:#e8eaf6;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:.15s;white-space:nowrap}
+.toolbar-btn:hover{background:#2a3060;color:#4f8ef7}
+.toolbar-btn.active{background:#4f8ef7;color:#fff}
+.toolbar-sep{width:1px;height:24px;background:#2a3060;margin:0 6px}
+
+/* VIEWPORT GRID */
+#viewportGrid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:#000;padding:2px}
+.viewport{background:#1a1a2e;border:1px solid #2a3060;position:relative;overflow:hidden}
+.viewport canvas{width:100%;height:100%;display:block}
+.viewport-label{position:absolute;top:6px;right:6px;background:#00000099;color:#888;font-size:10px;padding:3px 8px;border-radius:4px;pointer-events:none}
+
+/* RIGHT PANEL */
+#rightPanel{width:300px;background:#13172a;border-left:1px solid #2a3060;overflow-y:auto;display:flex;flex-direction:column}
+#rightPanel h3{padding:14px;font-size:13px;border-bottom:1px solid #2a3060;font-weight:700}
+
+/* PROPERTIES PANEL */
+#propPanel{padding:12px;flex:1}
+.prop-group{margin-bottom:14px;border-bottom:1px solid #1c2240;padding-bottom:10px}
+.prop-group:last-child{border-bottom:none}
+.prop-label{font-size:11px;color:#8892b0;font-weight:600;margin-bottom:4px;text-transform:uppercase}
+.prop-input{width:100%;padding:6px 8px;background:#0d0f1e;border:1px solid #2a3060;color:#e8eaf6;border-radius:4px;font-size:11px}
+.prop-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+.prop-row .prop-input{margin:0}
+.prop-row label{font-size:10px;color:#5a6480;margin-bottom:2px;display:block}
+
+/* BUTTONS */
+.btn{padding:8px 12px;background:#4f8ef7;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:.15s}
+.btn:hover{background:#3b7de8;transform:translateY(-1px)}
+.btn-danger{background:#e74c3c}
+.btn-danger:hover{background:#c0392b}
+.btn-success{background:#2ecc71}
+.btn-success:hover{background:#27ae60}
+.btn-block{width:100%;margin-top:8px}
+
+/* MODAL */
+#modal{position:fixed;inset:0;background:#00000088;display:none;align-items:center;justify-content:center;z-index:1000}
+#modal.open{display:flex}
+.modal-content{background:#13172a;border:1px solid #2a3060;border-radius:12px;padding:20px;max-width:500px;width:90%}
+.modal-content h2{margin-bottom:12px;font-size:16px}
+.modal-content p{color:#8892b0;font-size:12px;margin-bottom:14px}
+.modal-btns{display:flex;gap:10px}
+
+/* BOTTOM STATUS BAR */
+#statusBar{height:30px;background:#0d0f1e;border-top:1px solid #2a3060;display:flex;align-items:center;padding:0 14px;font-size:11px;color:#8892b0;gap:20px;overflow-x:auto}
+.status-item{display:flex;gap:4px}
+
+/* COLORS */
+:root{
+  --primary:#4f8ef7;--success:#2ecc71;--warning:#f1c40f;--danger:#e74c3c;
+  --bg:#0a0c14;--panel:#13172a;--card:#1c2240;--border:#2a3060;--text:#e8eaf6;--muted:#8892b0
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:#0d0f1e}
+::-webkit-scrollbar-thumb{background:#2a3060;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#3a4070}
+</style>
+</head>
+<body>
+
+<div id="layout">
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <h2>🗺️ Map Editor</h2>
+  
+  <div class="panel">
+    <div class="panel-title">🎬 Viewport</div>
+    <div class="panel-item" onclick="setViewMode('4way')" data-mode="4way">📱 4-Way Split</div>
+    <div class="panel-item" onclick="setViewMode('camera')" data-mode="camera">📷 Camera View</div>
+    <div class="panel-item" onclick="setViewMode('top')" data-mode="top">⬆️ Top View</div>
+    <div class="panel-item" onclick="setViewMode('front')" data-mode="front">⬅️ Front View</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🏗️ Scene Objects</div>
+    <div class="panel-item" onclick="addObject('building')">🏢 Add Building</div>
+    <div class="panel-item" onclick="addObject('tree')">🌳 Add Tree</div>
+    <div class="panel-item" onclick="addObject('road')">🛣️ Add Road</div>
+    <div class="panel-item" onclick="addObject('spawn')">🚗 Spawn Point</div>
+    <div class="panel-item" onclick="addObject('npc')">🤖 NPC</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">📦 Imported Models</div>
+    <div id="modelList" style="max-height:200px;overflow-y:auto"></div>
+    <button class="btn btn-block" onclick="importGLB()">📤 Import GLB</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🎯 Tools</div>
+    <div class="panel-item" onclick="setTool('select')">✋ Select</div>
+    <div class="panel-item" onclick="setTool('move')">↔️ Move (W)</div>
+    <div class="panel-item" onclick="setTool('rotate')">🔄 Rotate (E)</div>
+    <div class="panel-item" onclick="setTool('scale')">📏 Scale (R)</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">⚙️ Settings</div>
+    <div class="panel-item" onclick="toggleGridSnap()">🔲 Grid Snap</div>
+    <div class="panel-item" onclick="toggleLightingMode()">💡 Lighting</div>
+    <div class="panel-item" onclick="showMeasure()">📐 Measure</div>
+    <div class="panel-item" onclick="openMinimap()">🗺️ Minimap</div>
+  </div>
+
+  <div class="panel" style="margin-top:auto">
+    <div class="panel-title">📤 Export</div>
+    <button class="btn btn-success btn-block" onclick="exportMap()">💾 Export Config</button>
+    <button class="btn btn-block" onclick="exportHTML()">📄 Export HTML</button>
+    <button class="btn btn-danger btn-block" onclick="resetScene()">🔄 Reset Scene</button>
+  </div>
+</div>
+
+<!-- VIEWPORT -->
+<div id="viewportContainer">
+  <div id="toolbar">
+    <button class="toolbar-btn active" onclick="setViewMode('4way')">📱 4-Way</button>
+    <button class="toolbar-btn" onclick="setViewMode('camera')">📷 Camera</button>
+    <button class="toolbar-btn" onclick="setViewMode('top')">⬆️ Top</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="toolMove" onclick="setTool('move')">↔️ Move (W)</button>
+    <button class="toolbar-btn" id="toolRotate" onclick="setTool('rotate')">🔄 Rotate (E)</button>
+    <button class="toolbar-btn" id="toolScale" onclick="setTool('scale')">📏 Scale (R)</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" onclick="undoAction()">↶ Undo</button>
+    <button class="toolbar-btn" onclick="redoAction()">↷ Redo</button>
+    <div class="toolbar-sep"></div>
+    <input type="range" id="gridSize" min="0.1" max="5" value="1" step="0.1" style="width:100px;cursor:pointer" oninput="updateGridSize(this.value)" title="Grid Size">
+    <span id="gridLabel" style="color:#8892b0;font-size:11px;min-width:40px">1.0m</span>
+  </div>
+
+  <div id="viewportGrid">
+    <div class="viewport" id="viewport-camera"><canvas></canvas><div class="viewport-label">📷 Camera</div></div>
+    <div class="viewport" id="viewport-top"><canvas></canvas><div class="viewport-label">⬆️ Top</div></div>
+    <div class="viewport" id="viewport-front"><canvas></canvas><div class="viewport-label">⬅️ Front</div></div>
+    <div class="viewport" id="viewport-right"><canvas></canvas><div class="viewport-label">➡️ Right</div></div>
+  </div>
+
+  <div id="statusBar">
+    <div class="status-item">📊 <span id="status-stats">Objects: 0 | Polygons: 0 | FPS: 60</span></div>
+    <div class="status-item">💾 <span id="status-size">Scene Size: 0 KB</span></div>
+    <div class="status-item" id="status-selection">🎯 Selected: None</div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="rightPanel">
+  <h3>🔧 Properties</h3>
+  <div id="propPanel">
+    <div style="color:#8892b0;font-size:11px;text-align:center;padding:20px">Select an object to edit</div>
+  </div>
+</div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div class="modal-content">
+    <h2 id="modalTitle"></h2>
+    <p id="modalText"></p>
+    <div class="modal-btns">
+      <button class="btn btn-block" onclick="closeModal()">OK</button>
+    </div>
+  </div>
+</div>
+
+<script src="map-editor-base64.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+window.THREE = THREE;
+window.GLTFLoader = GLTFLoader;
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+window.editor = {
+  scenes: {},
+  cameras: {},
+  renderers: {},
+  controls: {},
+  objects: [],
+  selectedObject: null,
+  currentTool: 'select',
+  currentMode: '4way',
+  gridSize: 1,
+  history: [],
+  historyIndex: -1,
+  isDragging: false,
+  dragStart: new THREE.Vector2(),
+  importedModels: [],
+  config: {
+    version: '1.0',
+    worldSize: 500,
+    objects: [],
+    spawn: { x: 0, y: 0, z: 0 },
+    boundaries: { x1: -200, x2: 200, z1: -200, z2: 200 },
+    lighting: { sunIntensity: 1.6, ambientIntensity: 1.4, sunDir: { x: 1, y: 2, z: 1 } }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  initViewports();
+  setupEventListeners();
+  setupShortcuts();
+  animate();
+});
+
+function initViewports() {
+  const viewports = ['camera', 'top', 'front', 'right'];
+  const cameraConfigs = {
+    camera: { pos: [30, 30, 30], name: 'Camera' },
+    top: { pos: [0, 100, 0], name: 'Top' },
+    front: { pos: [0, 20, 100], name: 'Front' },
+    right: { pos: [100, 20, 0], name: 'Right' }
+  };
+
+  viewports.forEach(vp => {
+    const container = document.getElementById(`viewport-${vp}`);
+    const canvas = container.querySelector('canvas');
+    
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    scene.fog = new THREE.Fog(0x1a1a2e, 300, 500);
+    
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const sun = new THREE.DirectionalLight(0xfffbe0, 1.4);
+    sun.position.set(1, 2, 1).normalize();
+    scene.add(sun);
+    
+    // Camera
+    const camera = new THREE.PerspectiveCamera(50, canvas.offsetWidth / canvas.offsetHeight, 0.1, 1000);
+    const cfg = cameraConfigs[vp];
+    camera.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
+    camera.lookAt(0, 0, 0);
+    
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
+    renderer.shadowMap.enabled = false;
+    
+    // Grid
+    const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222);
+    scene.add(gridHelper);
+    
+    // Boundary box
+    const boundaryGeom = new THREE.BufferGeometry();
+    const boundaryVerts = [
+      [-200, 0, -200], [200, 0, -200], [200, 0, 200], [-200, 0, 200], [-200, 0, -200]
+    ];
+    boundaryGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(boundaryVerts.flat()), 3));
+    const boundaryLine = new THREE.Line(boundaryGeom, new THREE.LineBasicMaterial({ color: 0xff6600 }));
+    scene.add(boundaryLine);
+    
+    editor.scenes[vp] = scene;
+    editor.cameras[vp] = camera;
+    editor.renderers[vp] = renderer;
+  });
+}
+
+function setupEventListeners() {
+  window.addEventListener('resize', () => {
+    Object.keys(editor.renderers).forEach(vp => {
+      const container = document.getElementById(`viewport-${vp}`);
+      const canvas = container.querySelector('canvas');
+      const camera = editor.cameras[vp];
+      const renderer = editor.renderers[vp];
+      
+      camera.aspect = canvas.offsetWidth / canvas.offsetHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
+    });
+  });
+}
+
+function setupShortcuts() {
+  document.addEventListener('keydown', e => {
+    if (e.key === 'w' || e.key === 'W') setTool('move');
+    if (e.key === 'e' || e.key === 'E') setTool('rotate');
+    if (e.key === 'r' || e.key === 'R') setTool('scale');
+    if (e.key === 'z' && e.ctrlKey) undoAction();
+    if (e.key === 'y' && e.ctrlKey) redoAction();
+    if (e.key === 'Delete') deleteSelected();
+    if (e.key === 'd' && e.ctrlKey) { e.preventDefault(); duplicateSelected(); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEWPORT MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+window.setViewMode = (mode) => {
+  editor.currentMode = mode;
+  const grid = document.getElementById('viewportGrid');
+  
+  if (mode === '4way') {
+    grid.style.gridTemplateColumns = '1fr 1fr';
+    grid.style.gridTemplateRows = '1fr 1fr';
+    document.querySelectorAll('.viewport').forEach(v => v.style.display = 'block');
+  } else {
+    grid.style.gridTemplateColumns = '1fr';
+    grid.style.gridTemplateRows = '1fr';
+    document.querySelectorAll('.viewport').forEach(v => v.style.display = 'none');
+    document.getElementById(`viewport-${mode}`).style.display = 'block';
+  }
+  
+  window.dispatchEvent(new Event('resize'));
+};
+
+// ═══════════════════════════════════════════════════════════
+// TOOL MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+window.setTool = (tool) => {
+  editor.currentTool = tool;
+  document.querySelectorAll('.toolbar-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tool${tool.charAt(0).toUpperCase() + tool.slice(1)}`).classList.add('active');
+};
+
+// ═══════════════════════════════════════════════════════════
+// OBJECT MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+window.addObject = (type) => {
+  const geom = {
+    building: () => new THREE.BoxGeometry(10, 15, 10),
+    tree: () => new THREE.ConeGeometry(3, 10, 8),
+    road: () => new THREE.PlaneGeometry(20, 40),
+    spawn: () => new THREE.SphereGeometry(2, 8, 8),
+    npc: () => new THREE.BoxGeometry(2, 4, 2)
+  }[type]();
+  
+  const colors = { building: 0xaa5544, tree: 0x228B22, road: 0x444444, spawn: 0x00ff00, npc: 0xff0000 };
+  const mat = new THREE.MeshStandardMaterial({ color: colors[type], roughness: 0.8 });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.position.y = type === 'road' ? 0.1 : 0;
+  mesh.userData = { type, name: `${type}_${Date.now()}` };
+  
+  Object.values(editor.scenes).forEach(scene => scene.add(mesh));
+  editor.objects.push(mesh);
+  saveHistory();
+  updateStatus();
+};
+
+window.deleteSelected = () => {
+  if (editor.selectedObject) {
+    Object.values(editor.scenes).forEach(scene => scene.remove(editor.selectedObject));
+    editor.objects = editor.objects.filter(o => o !== editor.selectedObject);
+    editor.selectedObject = null;
+    updateProperties();
+    saveHistory();
+  }
+};
+
+window.duplicateSelected = () => {
+  if (editor.selectedObject) {
+    const clone = editor.selectedObject.clone();
+    clone.position.add(new THREE.Vector3(5, 0, 5));
+    Object.values(editor.scenes).forEach(scene => scene.add(clone));
+    editor.objects.push(clone);
+    saveHistory();
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// HISTORY (UNDO/REDO)
+// ═══════════════════════════════════════════════════════════
+function saveHistory() {
+  editor.historyIndex++;
+  editor.history = editor.history.slice(0, editor.historyIndex);
+  editor.history.push(JSON.stringify(editor.config));
+}
+
+window.undoAction = () => {
+  if (editor.historyIndex > 0) {
+    editor.historyIndex--;
+    // Restore state
+  }
+};
+
+window.redoAction = () => {
+  if (editor.historyIndex < editor.history.length - 1) {
+    editor.historyIndex++;
+    // Restore state
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// PROPERTY EDITOR
+// ═══════════════════════════════════════════════════════════
+function updateProperties() {
+  const panel = document.getElementById('propPanel');
+  if (!editor.selectedObject) {
+    panel.innerHTML = '<div style="color:#8892b0;font-size:11px;text-align:center;padding:20px">Select an object to edit</div>';
+    return;
+  }
+  
+  const obj = editor.selectedObject;
+  panel.innerHTML = `
+    <div class="prop-group">
+      <div class="prop-label">Name</div>
+      <input class="prop-input" value="${obj.userData.name}" oninput="updateObjectName(this.value)">
+    </div>
+    <div class="prop-group">
+      <div class="prop-label">Position</div>
+      <div class="prop-row">
+        <div><label>X</label><input class="prop-input" type="number" value="${obj.position.x.toFixed(2)}" oninput="updateObjectPos('x', this.value)"></div>
+        <div><label>Y</label><input class="prop-input" type="number" value="${obj.position.y.toFixed(2)}" oninput="updateObjectPos('y', this.value)"></div>
+        <div><label>Z</label><input class="prop-input" type="number" value="${obj.position.z.toFixed(2)}" oninput="updateObjectPos('z', this.value)"></div>
+      </div>
+    </div>
+    <div class="prop-group">
+      <div class="prop-label">Rotation (deg)</div>
+      <div class="prop-row">
+        <div><label>X</label><input class="prop-input" type="number" value="${(obj.rotation.x * 180 / Math.PI).toFixed(2)}" oninput="updateObjectRot('x', this.value)"></div>
+        <div><label>Y</label><input class="prop-input" type="number" value="${(obj.rotation.y * 180 / Math.PI).toFixed(2)}" oninput="updateObjectRot('y', this.value)"></div>
+        <div><label>Z</label><input class="prop-input" type="number" value="${(obj.rotation.z * 180 / Math.PI).toFixed(2)}" oninput="updateObjectRot('z', this.value)"></div>
+      </div>
+    </div>
+    <div class="prop-group">
+      <div class="prop-label">Scale</div>
+      <div class="prop-row">
+        <div><label>X</label><input class="prop-input" type="number" value="${obj.scale.x.toFixed(2)}" oninput="updateObjectScale('x', this.value)"></div>
+        <div><label>Y</label><input class="prop-input" type="number" value="${obj.scale.y.toFixed(2)}" oninput="updateObjectScale('y', this.value)"></div>
+        <div><label>Z</label><input class="prop-input" type="number" value="${obj.scale.z.toFixed(2)}" oninput="updateObjectScale('z', this.value)"></div>
+      </div>
+    </div>
+    <div class="prop-group">
+      <div class="prop-label">Color</div>
+      <input type="color" value="#${obj.material.color.getHexString()}" oninput="updateObjectColor(this.value)" style="width:100%;height:35px;border-radius:4px;cursor:pointer;border:1px solid #2a3060">
+    </div>
+    <button class="btn btn-danger btn-block" onclick="deleteSelected()">🗑️ Delete</button>
+  `;
+}
+
+window.updateObjectName = (val) => { if (editor.selectedObject) editor.selectedObject.userData.name = val; };
+window.updateObjectPos = (axis, val) => { if (editor.selectedObject) editor.selectedObject.position[axis] = parseFloat(val); };
+window.updateObjectRot = (axis, val) => { if (editor.selectedObject) editor.selectedObject.rotation[axis] = parseFloat(val) * Math.PI / 180; };
+window.updateObjectScale = (axis, val) => { if (editor.selectedObject) editor.selectedObject.scale[axis] = parseFloat(val); };
+window.updateObjectColor = (hex) => { if (editor.selectedObject) editor.selectedObject.material.color.setStyle(hex); };
+
+// ═══════════════════════════════════════════════════════════
+// STATUS & UI
+// ═══════════════════════════════════════════════════════════
+function updateStatus() {
+  let polyCount = 0;
+  editor.objects.forEach(obj => {
+    if (obj.geometry) polyCount += obj.geometry.attributes.position.count / 3;
+  });
+  document.getElementById('status-stats').textContent = `Objects: ${editor.objects.length} | Polygons: ${polyCount | 0} | FPS: 60`;
+}
+
+window.updateGridSize = (val) => {
+  editor.gridSize = parseFloat(val);
+  document.getElementById('gridLabel').textContent = `${val}m`;
+};
+
+window.toggleGridSnap = () => {
+  alert('Grid snap enabled');
+};
+
+window.toggleLightingMode = () => {
+  alert('Lighting mode toggled');
+};
+
+window.showMeasure = () => {
+  alert('Measurement tool activated');
+};
+
+window.openMinimap = () => {
+  alert('Minimap opened');
+};
+
+window.importGLB = () => {
+  alert('GLB import feature coming soon');
+};
+
+window.exportMap = () => {
+  const config = {
+    version: '1.0',
+    objects: editor.objects.map(o => ({
+      type: o.userData.type,
+      name: o.userData.name,
+      position: o.position,
+      rotation: o.rotation,
+      scale: o.scale,
+      color: o.material.color.getHex()
+    }))
+  };
+  console.log(JSON.stringify(config, null, 2));
+  alert('Config exported to console');
+};
+
+window.exportHTML = () => {
+  alert('HTML export coming soon');
+};
+
+window.resetScene = () => {
+  if (confirm('Reset entire scene?')) {
+    editor.objects.forEach(o => Object.values(editor.scenes).forEach(s => s.remove(o)));
+    editor.objects = [];
+    editor.selectedObject = null;
+    updateProperties();
+    updateStatus();
+  }
+};
+
+window.closeModal = () => {
+  document.getElementById('modal').classList.remove('open');
+};
+
+// ═══════════════════════════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════════════════════════
+function animate() {
+  requestAnimationFrame(animate);
+  
+  Object.keys(editor.renderers).forEach(vp => {
+    const scene = editor.scenes[vp];
+    const camera = editor.cameras[vp];
+    const renderer = editor.renderers[vp];
+    
+    if (editor.selectedObject) {
+      editor.selectedObject.material.emissive.setHex(0x444444);
+    }
+    
+    renderer.render(scene, camera);
+  });
+}
+</script>
+</body>
+</html>

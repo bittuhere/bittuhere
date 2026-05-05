@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎨 Advanced Map Builder — Real City Drive Editor</title>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0c14;color:#e8eaf6;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+
+/* MAIN GRID */
+#container{display:grid;grid-template-columns:250px 1fr 320px;grid-template-rows:50px 1fr 35px;height:100vh;gap:0}
+
+/* HEADER */
+#header{grid-column:1/4;background:#0d0f1e;border-bottom:1px solid #2a3060;display:flex;align-items:center;padding:0 14px;gap:20px}
+#header h1{font-size:14px;font-weight:800;letter-spacing:1px;background:linear-gradient(90deg,#4f8ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-sep{width:1px;height:24px;background:#2a3060}
+.header-btns{display:flex;gap:8px;margin-left:auto}
+.hbtn{background:#1c2240;border:1px solid #2a3060;color:#e8eaf6;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:.15s}
+.hbtn:hover{background:#2a3060;color:#4f8ef7}
+.hbtn.danger{background:#e74c3c11;color:#ff6b6b}
+
+/* LEFT PANEL */
+#leftPanel{background:#13172a;border-right:1px solid #2a3060;display:flex;flex-direction:column;overflow-y:auto}
+#leftPanel h2{padding:12px;font-size:13px;border-bottom:1px solid #2a3060;font-weight:700}
+.section{padding:10px}
+.section-title{font-size:10px;color:#8892b0;text-transform:uppercase;font-weight:700;margin:8px 0;letter-spacing:.8px;padding:0 8px}
+.section-btn{width:100%;padding:8px 10px;background:#1c2240;border:1px solid #2a3060;color:#e8eaf6;border-radius:6px;margin:3px 0;cursor:pointer;font-size:11px;font-weight:600;transition:.15s;text-align:left}
+.section-btn:hover{background:#2a3060;color:#4f8ef7}
+.section-btn.active{background:#4f8ef722;color:#4f8ef7;border-color:#4f8ef7}
+
+/* CENTER VIEWPORT */
+#viewport{background:#1a1a2e;position:relative;overflow:hidden}
+#viewport canvas{width:100%;height:100%;display:block}
+#viewportOverlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+
+/* GIZMO */
+.gizmo-info{position:absolute;bottom:14px;left:14px;background:#00000088;backdrop-filter:blur(6px);border:1px solid #2a3060;border-radius:8px;padding:8px 12px;font-size:10px;color:#8892b0;pointer-events:none;z-index:10}
+
+/* GRID OVERLAY */
+#gridOverlay{position:absolute;top:0;left:0;opacity:0.1;pointer-events:none}
+
+/* RIGHT PANEL */
+#rightPanel{background:#13172a;border-left:1px solid #2a3060;display:flex;flex-direction:column;overflow-y:auto}
+#rightPanel h3{padding:12px;font-size:13px;border-bottom:1px solid #2a3060;font-weight:700}
+#propPanel{padding:12px;flex:1}
+.prop-row{margin-bottom:10px;border-bottom:1px solid #1c2240;padding-bottom:8px}
+.prop-row:last-child{border-bottom:none}
+.prop-label{font-size:10px;color:#8892b0;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.prop-input{width:100%;padding:6px 8px;background:#0d0f1e;border:1px solid #2a3060;color:#e8eaf6;border-radius:4px;font-size:11px}
+.prop-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.prop-grid input{padding:4px 6px;font-size:10px}
+
+/* FOOTER */
+#footer{grid-column:1/4;background:#0d0f1e;border-top:1px solid #2a3060;display:flex;align-items:center;padding:0 14px;font-size:10px;color:#8892b0;gap:20px;overflow-x:auto}
+.stat{display:flex;gap:4px}
+
+/* MODAL */
+#modalOverlay{position:fixed;inset:0;background:#00000088;display:none;align-items:center;justify-content:center;z-index:1000}
+#modalOverlay.active{display:flex}
+.modal{background:#13172a;border:1px solid #2a3060;border-radius:12px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{margin-bottom:12px;font-size:16px}
+.modal p{color:#8892b0;font-size:11px;margin-bottom:14px}
+.modal-buttons{display:flex;gap:10px;margin-top:14px}
+.btn{padding:8px 14px;background:#4f8ef7;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:.15s}
+.btn:hover{background:#3b7de8}
+.btn.success{background:#2ecc71}
+.btn.danger{background:#e74c3c}
+.btn.secondary{background:#1c2240;color:#e8eaf6;border:1px solid #2a3060}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:#0d0f1e}
+::-webkit-scrollbar-thumb{background:#2a3060;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#3a4070}
+</style>
+</head>
+<body>
+
+<div id="container">
+
+<!-- HEADER -->
+<div id="header">
+  <h1>🗺️ Advanced Map Builder</h1>
+  <div class="header-sep"></div>
+  <div class="header-btns">
+    <button class="hbtn" onclick="openHelp()">❓ Help</button>
+    <button class="hbtn success" onclick="saveProject()">💾 Save</button>
+    <button class="hbtn" onclick="exportProject()">📤 Export</button>
+    <button class="hbtn danger" onclick="resetProject()">🔄 Reset</button>
+  </div>
+</div>
+
+<!-- LEFT PANEL -->
+<div id="leftPanel">
+  <h2>🎮 Tools & Objects</h2>
+  
+  <div class="section">
+    <div class="section-title">🎯 Selection Tools</div>
+    <button class="section-btn active" onclick="selectTool('select')">✋ Select</button>
+    <button class="section-btn" onclick="selectTool('move')">↔️ Move (W)</button>
+    <button class="section-btn" onclick="selectTool('rotate')">🔄 Rotate (E)</button>
+    <button class="section-btn" onclick="selectTool('scale')">📏 Scale (R)</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🏗️ Add Objects</div>
+    <button class="section-btn" onclick="addObject('building')">🏢 Building</button>
+    <button class="section-btn" onclick="addObject('tree')">🌳 Tree</button>
+    <button class="section-btn" onclick="addObject('road')">🛣️ Road</button>
+    <button class="section-btn" onclick="addObject('bench')">🪑 Bench</button>
+    <button class="section-btn" onclick="addObject('light')">💡 Light Pole</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📍 Special Objects</div>
+    <button class="section-btn" onclick="addObject('spawn')">🚗 Spawn Point</button>
+    <button class="section-btn" onclick="addObject('checkpoint')">🚩 Checkpoint</button>
+    <button class="section-btn" onclick="addObject('zone')">📦 Zone</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📦 Imported Models</div>
+    <div id="modelList" style="font-size:11px;color:#8892b0;max-height:150px;overflow-y:auto">No models imported</div>
+    <button class="section-btn" onclick="importGLB()" style="margin-top:8px">📤 Import GLB</button>
+  </div>
+
+  <div class="section" style="margin-top:auto;border-top:1px solid #2a3060;padding-top:10px">
+    <div class="section-title">⚙️ Editor Settings</div>
+    <button class="section-btn" onclick="toggleGridSnap()">🔲 Grid Snap: OFF</button>
+    <button class="section-btn" onclick="toggleWireframe()">🔗 Wireframe: OFF</button>
+    <button class="section-btn" onclick="resetCamera()">📷 Reset Camera</button>
+  </div>
+</div>
+
+<!-- CENTER VIEWPORT -->
+<div id="viewport">
+  <canvas id="canvas"></canvas>
+  <div id="viewportOverlay">
+    <div class="gizmo-info">Ready to edit</div>
+    <canvas id="gridOverlay" style="position:absolute;top:0;left:0"></canvas>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="rightPanel">
+  <h3>🔧 Inspector</h3>
+  <div id="propPanel">
+    <div style="color:#8892b0;text-align:center;padding:20px;font-size:11px">Select an object to inspect</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="stat">📊 <span id="stat-objects">Objects: 0</span></div>
+  <div class="stat">🔺 <span id="stat-poly">Polygons: 0</span></div>
+  <div class="stat">⚡ <span id="stat-fps">FPS: 60</span></div>
+  <div class="stat" style="margin-left:auto">💾 <span id="stat-size">Size: 0 KB</span></div>
+  <div class="stat">🎯 <span id="stat-selection">None</span></div>
+</div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Export Project</h2>
+    <p id="modalDesc"></p>
+    <div id="modalContent"></div>
+    <div class="modal-buttons">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn success" onclick="confirmAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="map-editor-base64.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// STATE
+window.mapEditor = {
+  scene: null, camera: null, renderer: null,
+  objects: [], selectedObject: null,
+  currentTool: 'select', gridSnap: false, gridSize: 1,
+  history: [], historyIndex: -1,
+  raycaster: new THREE.Raycaster(),
+  mouse: new THREE.Vector2(),
+  isDragging: false,
+  lastFrameTime: 0,
+  stats: { fps: 60, objects: 0, polygons: 0 }
+};
+
+// INIT
+window.addEventListener('load', () => initEditor());
+
+function initEditor() {
+  const canvas = document.getElementById('canvas');
+  
+  // Scene
+  mapEditor.scene = new THREE.Scene();
+  mapEditor.scene.background = new THREE.Color(0x1a1a2e);
+  mapEditor.scene.fog = new THREE.Fog(0x1a1a2e, 300, 500);
+  
+  // Camera
+  mapEditor.camera = new THREE.PerspectiveCamera(65, canvas.offsetWidth / canvas.offsetHeight, 0.1, 1000);
+  mapEditor.camera.position.set(40, 40, 40);
+  mapEditor.camera.lookAt(0, 0, 0);
+  
+  // Renderer
+  mapEditor.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+  mapEditor.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  mapEditor.renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
+  mapEditor.renderer.shadowMap.enabled = false;
+  mapEditor.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  
+  // Lights
+  mapEditor.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xfffbe0, 1.4);
+  sun.position.set(1, 2, 1).normalize();
+  mapEditor.scene.add(sun);
+  
+  // Grid
+  const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222);
+  mapEditor.scene.add(gridHelper);
+  
+  // Boundary
+  const boundaryGeom = new THREE.BufferGeometry();
+  const pts = [[-200, 0, -200], [200, 0, -200], [200, 0, 200], [-200, 0, 200], [-200, 0, -200]];
+  boundaryGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts.flat()), 3));
+  const boundaryLine = new THREE.Line(boundaryGeom, new THREE.LineBasicMaterial({ color: 0xff6600, linewidth: 2 }));
+  mapEditor.scene.add(boundaryLine);
+  
+  setupEventListeners();
+  animate();
+  updateStats();
+}
+
+function setupEventListeners() {
+  const canvas = document.getElementById('canvas');
+  
+  canvas.addEventListener('click', e => {
+    const rect = canvas.getBoundingClientRect();
+    mapEditor.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mapEditor.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    
+    mapEditor.raycaster.setFromCamera(mapEditor.mouse, mapEditor.camera);
+    const intersects = mapEditor.raycaster.intersectObjects(mapEditor.objects);
+    
+    if (intersects.length > 0) {
+      selectObject(intersects[0].object);
+    } else {
+      selectObject(null);
+    }
+  });
+  
+  window.addEventListener('keydown', e => {
+    if (e.key === 'w') selectTool('move');
+    if (e.key === 'e') selectTool('rotate');
+    if (e.key === 'r') selectTool('scale');
+    if (e.key === 'Delete') deleteSelected();
+    if (e.ctrlKey && e.key === 'z') undoAction();
+    if (e.ctrlKey && e.key === 'y') redoAction();
+  });
+  
+  window.addEventListener('resize', () => {
+    mapEditor.camera.aspect = canvas.offsetWidth / canvas.offsetHeight;
+    mapEditor.camera.updateProjectionMatrix();
+    mapEditor.renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
+  });
+}
+
+window.selectTool = (tool) => {
+  mapEditor.currentTool = tool;
+  document.querySelectorAll('.section-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`button[onclick="selectTool('${tool}')"]`).classList.add('active');
+};
+
+window.addObject = (type) => {
+  const geoms = {
+    building: () => new THREE.BoxGeometry(10, 15, 10),
+    tree: () => new THREE.ConeGeometry(3, 10, 8),
+    road: () => new THREE.PlaneGeometry(20, 40),
+    bench: () => new THREE.BoxGeometry(4, 2, 2),
+    light: () => new THREE.CylinderGeometry(1, 1, 20, 8),
+    spawn: () => new THREE.SphereGeometry(2, 8, 8),
+    checkpoint: () => new THREE.BoxGeometry(5, 5, 5),
+    zone: () => new THREE.BoxGeometry(30, 0.1, 30)
+  };
+  
+  const colors = {
+    building: 0xaa5544, tree: 0x228B22, road: 0x444444, bench: 0x8B4513,
+    light: 0xcccccc, spawn: 0x00ff00, checkpoint: 0xffaa00, zone: 0x0088ff
+  };
+  
+  const geom = geoms[type]();
+  const mat = new THREE.MeshStandardMaterial({ color: colors[type], roughness: 0.8 });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.userData = { type, name: `${type}_${Date.now()}` };
+  
+  mapEditor.scene.add(mesh);
+  mapEditor.objects.push(mesh);
+  selectObject(mesh);
+  saveHistory();
+};
+
+function selectObject(obj) {
+  if (mapEditor.selectedObject) mapEditor.selectedObject.material.emissive.setHex(0x000000);
+  mapEditor.selectedObject = obj;
+  if (obj) {
+    obj.material.emissive.setHex(0x444444);
+    updateInspector();
+    document.getElementById('stat-selection').textContent = obj.userData.name || 'Object';
+  } else {
+    updateInspector();
+    document.getElementById('stat-selection').textContent = 'None';
+  }
+}
+
+function updateInspector() {
+  const panel = document.getElementById('propPanel');
+  if (!mapEditor.selectedObject) {
+    panel.innerHTML = '<div style="color:#8892b0;text-align:center;padding:20px;font-size:11px">Select an object to inspect</div>';
+    return;
+  }
+  
+  const obj = mapEditor.selectedObject;
+  panel.innerHTML = `
+    <div class="prop-row">
+      <div class="prop-label">Name</div>
+      <input class="prop-input" value="${obj.userData.name}" oninput="mapEditor.selectedObject.userData.name = this.value">
+    </div>
+    <div class="prop-row">
+      <div class="prop-label">Position (X, Y, Z)</div>
+      <div class="prop-grid">
+        <input type="number" step="0.1" value="${obj.position.x.toFixed(2)}" oninput="mapEditor.selectedObject.position.x = parseFloat(this.value)">
+        <input type="number" step="0.1" value="${obj.position.y.toFixed(2)}" oninput="mapEditor.selectedObject.position.y = parseFloat(this.value)">
+        <input type="number" step="0.1" value="${obj.position.z.toFixed(2)}" oninput="mapEditor.selectedObject.position.z = parseFloat(this.value)">
+      </div>
+    </div>
+    <div class="prop-row">
+      <div class="prop-label">Rotation (deg)</div>
+      <div class="prop-grid">
+        <input type="number" step="1" value="${(obj.rotation.x * 180 / Math.PI).toFixed(0)}" oninput="mapEditor.selectedObject.rotation.x = parseFloat(this.value) * Math.PI / 180">
+        <input type="number" step="1" value="${(obj.rotation.y * 180 / Math.PI).toFixed(0)}" oninput="mapEditor.selectedObject.rotation.y = parseFloat(this.value) * Math.PI / 180">
+        <input type="number" step="1" value="${(obj.rotation.z * 180 / Math.PI).toFixed(0)}" oninput="mapEditor.selectedObject.rotation.z = parseFloat(this.value) * Math.PI / 180">
+      </div>
+    </div>
+    <div class="prop-row">
+      <div class="prop-label">Scale (X, Y, Z)</div>
+      <div class="prop-grid">
+        <input type="number" step="0.1" value="${obj.scale.x.toFixed(2)}" oninput="mapEditor.selectedObject.scale.x = parseFloat(this.value)">
+        <input type="number" step="0.1" value="${obj.scale.y.toFixed(2)}" oninput="mapEditor.selectedObject.scale.y = parseFloat(this.value)">
+        <input type="number" step="0.1" value="${obj.scale.z.toFixed(2)}" oninput="mapEditor.selectedObject.scale.z = parseFloat(this.value)">
+      </div>
+    </div>
+    <div class="prop-row">
+      <div class="prop-label">Color</div>
+      <input type="color" value="#${obj.material.color.getHexString()}" oninput="mapEditor.selectedObject.material.color.setStyle(this.value)" style="width:100%;height:35px;border-radius:4px;cursor:pointer">
+    </div>
+    <button class="btn danger" onclick="deleteSelected()" style="width:100%;margin-top:10px">🗑️ Delete</button>
+  `;
+}
+
+window.deleteSelected = () => {
+  if (mapEditor.selectedObject) {
+    mapEditor.scene.remove(mapEditor.selectedObject);
+    mapEditor.objects = mapEditor.objects.filter(o => o !== mapEditor.selectedObject);
+    selectObject(null);
+    saveHistory();
+  }
+};
+
+window.toggleGridSnap = function() {
+  mapEditor.gridSnap = !mapEditor.gridSnap;
+  this.textContent = `🔲 Grid Snap: ${mapEditor.gridSnap ? 'ON' : 'OFF'}`;
+};
+
+window.toggleWireframe = function() {
+  const wireframe = !mapEditor.renderer.wireframe;
+  mapEditor.renderer.wireframe = wireframe;
+  this.textContent = `🔗 Wireframe: ${wireframe ? 'ON' : 'OFF'}`;
+};
+
+window.resetCamera = () => {
+  mapEditor.camera.position.set(40, 40, 40);
+  mapEditor.camera.lookAt(0, 0, 0);
+};
+
+window.importGLB = () => {
+  alert('GLB import coming soon!');
+};
+
+window.selectObject = selectObject;
+
+function saveHistory() {
+  mapEditor.historyIndex++;
+  mapEditor.history = mapEditor.history.slice(0, mapEditor.historyIndex);
+}
+
+window.undoAction = () => {
+  if (mapEditor.historyIndex > 0) mapEditor.historyIndex--;
+};
+
+window.redoAction = () => {
+  if (mapEditor.historyIndex < mapEditor.history.length - 1) mapEditor.historyIndex++;
+};
+
+function updateStats() {
+  let polyCount = 0;
+  mapEditor.objects.forEach(o => {
+    if (o.geometry) polyCount += (o.geometry.attributes?.position?.count || 0) / 3;
+  });
+  document.getElementById('stat-objects').textContent = `Objects: ${mapEditor.objects.length}`;
+  document.getElementById('stat-poly').textContent = `Polygons: ${polyCount | 0}`;
+}
+
+window.saveProject = () => {
+  const config = mapEditor.objects.map(o => ({
+    type: o.userData.type,
+    name: o.userData.name,
+    position: { x: o.position.x, y: o.position.y, z: o.position.z },
+    rotation: { x: o.rotation.x, y: o.rotation.y, z: o.rotation.z },
+    scale: { x: o.scale.x, y: o.scale.y, z: o.scale.z },
+    color: o.material.color.getHex()
+  }));
+  localStorage.setItem('mapEditorProject', JSON.stringify(config));
+  alert('Project saved!');
+};
+
+window.exportProject = () => {
+  const config = mapEditor.objects.map(o => ({
+    type: o.userData.type,
+    name: o.userData.name,
+    position: { x: o.position.x, y: o.position.y, z: o.position.z },
+    rotation: { x: o.rotation.x, y: o.rotation.y, z: o.rotation.z },
+    scale: { x: o.scale.x, y: o.scale.y, z: o.scale.z },
+    color: `#${o.material.color.getHexString()}`
+  }));
+  const json = JSON.stringify(config, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'map-config.json';
+  a.click();
+};
+
+window.resetProject = () => {
+  if (confirm('Reset entire project?')) {
+    mapEditor.objects.forEach(o => mapEditor.scene.remove(o));
+    mapEditor.objects = [];
+    selectObject(null);
+  }
+};
+
+window.openHelp = () => {
+  alert('🗺️ Advanced Map Editor\n\n🎯 Keyboard Shortcuts:\nW - Move Tool\nE - Rotate Tool\nR - Scale Tool\nDelete - Remove selected\nCtrl+Z - Undo\nCtrl+Y - Redo\n\n💡 Tips:\n- Click objects to select\n- Adjust properties on the right panel\n- Use grid snap for precise placement\n- Export your map as JSON config');
+};
+
+window.closeModal = () => {
+  document.getElementById('modalOverlay').classList.remove('active');
+};
+
+function animate() {
+  requestAnimationFrame(animate);
+  mapEditor.renderer.render(mapEditor.scene, mapEditor.camera);
+  updateStats();
+}
+</script>
+</body>
+</html>
