@@ -9422,6 +9422,11 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
     <script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js&quot;></script>
     <script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js&quot;></script>
     <script src=&quot;https://cdn.socket.io/4.7.2/socket.io.min.js&quot;></script>
+
+    <script>
+        // --- CONFIG ---
+        const firebaseConfig = {
+            apiKey: &quot;AIzaSyD8KMiqZTr39IPw8LENyahLILLNbkFfQXM&quot;,
             authDomain: &quot;bittuhere-90415.firebaseapp.com&quot;,
             databaseURL: &quot;https://bittuhere-90415-default-rtdb.asia-southeast1.firebasedatabase.app&quot;,
             projectId: &quot;bittuhere-90415&quot;,
@@ -9434,8 +9439,15 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const socket = io('https://arcade-hub-email.onrender.com');
-        const myName = localStorage.getItem('playerName') || "Player";
 
+        // Game Vars
+        let mySymbol = '';
+        let roomId = '';
+        let isMyTurn = false;
+        let gameActive = true;
+        const myName = localStorage.getItem('playerName') || &quot;Player&quot;;
+
+        // UI
         const lobby = document.getElementById('lobby');
         const gameArea = document.getElementById('game-area');
         const statusMsg = document.getElementById('statusMsg');
@@ -9446,68 +9458,102 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
         const inviteList = document.getElementById('invite-list');
         const chatMsgs = document.getElementById('gameChatMsgs');
 
-        // SIDEBAR (Firebase — social feature)
-        function toggleSidebar() { sidebar.classList.toggle('active'); if (sidebar.classList.contains('active')) loadFriendsForInvite(); }
+        // --- SIDEBAR ---
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            if (sidebar.classList.contains('active')) loadFriendsForInvite();
+        }
+
         function loadFriendsForInvite() {
             if (!myName) return;
             db.ref('friends/' + myName).once('value', snapshot => {
-                inviteList.innerHTML = "";
+                inviteList.innerHTML = &quot;&quot;;
                 if (snapshot.exists()) {
                     Object.keys(snapshot.val()).forEach(friendName => {
-                        const div = document.createElement('div'); div.className = 'invite-item';
-                        div.innerHTML = `<span>${friendName}</span><button class="btn-send-invite" onclick="sendInvite('${friendName}')">SEND CODE</button>`;
+                        const div = document.createElement('div');
+                        div.className = 'invite-item';
+                        div.innerHTML = `<span>${friendName}</span><button class=&quot;btn-send-invite&quot; onclick=&quot;sendInvite('${friendName}')&quot;>SEND CODE</button>`;
                         inviteList.appendChild(div);
                     });
-                } else inviteList.innerHTML = "<p>No friends found.</p>";
+                } else inviteList.innerHTML = &quot;<p>No friends found.</p>&quot;;
             });
         }
+
         function sendInvite(friendName) {
             if (!roomId) return window.parent.postMessage({type:'notify',msg:'Create a game first!',nt:'error'},'*');
-            db.ref('invites/' + friendName.toLowerCase()).push({ from: myName, game: 'ttt', code: roomId, time: Date.now() });
+            // Write to Firebase invites/<recipientName> — NOT postMessage (that only goes to self)
+            db.ref('invites/' + friendName.toLowerCase()).push({
+                from: myName, game: 'ttt', code: roomId, time: Date.now()
+            });
             var chatId = [myName, friendName].sort().join('_');
-            db.ref('chats/' + chatId).push({ sender: myName, text: 'Join my Tic-Tac-Toe! Code: ' + roomId, timestamp: Date.now() });
-            window.parent.postMessage({type:'notify',msg:'Invite sent to '+friendName+'!',nt:'invite'},'*');
+            db.ref('chats/' + chatId).push({
+                sender: myName, text: '🎮 Join my Tic-Tac-Toe! Code: ' + roomId, timestamp: Date.now()
+            });
+            window.parent.postMessage({type:'notify',msg:'✓ Invite sent to '+friendName+'!',nt:'invite'},'*');
             toggleSidebar();
         }
 
-        // SOCKET EVENTS
+        // --- SOCKET LISTENERS ---
         socket.on('ttt:created', ({ roomId: rid }) => {
             roomId = rid; mySymbol = 'X';
-            enterGameUI(); statusMsg.innerText = "Waiting for opponent...";
+            enterGameUI();
+            statusMsg.innerText = &quot;Waiting for opponent...&quot;;
             setTimeout(() => { if (!sidebar.classList.contains('active')) toggleSidebar(); }, 600);
         });
         socket.on('ttt:state', ({ board, turn, status, winner }) => {
-            updateBoardUI(board); restartBtn.style.display = 'none';
-            cells.forEach(c => c.classList.remove('win-highlight'));
+            updateBoardUI(board);
+            restartBtn.style.display = 'none';
+            cells.forEach(c =&gt; c.classList.remove('win-highlight'));
             if (status === 'playing') {
                 gameActive = true;
-                if (turn === mySymbol) { statusMsg.innerText = "YOUR TURN (" + mySymbol + ")"; statusMsg.style.color = "#00f3ff"; isMyTurn = true; }
-                else { statusMsg.innerText = "Opponent's Turn"; statusMsg.style.color = "#aaa"; isMyTurn = false; }
+                if (turn === mySymbol) {
+                    statusMsg.innerText = &quot;YOUR TURN (&quot; + mySymbol + &quot;)&quot;;
+                    statusMsg.style.color = &quot;#00f3ff&quot;; isMyTurn = true;
+                } else {
+                    statusMsg.innerText = &quot;Opponent's Turn&quot;;
+                    statusMsg.style.color = &quot;#aaa&quot;; isMyTurn = false;
+                }
             } else if (status === 'finished') {
                 restartBtn.style.display = 'block'; isMyTurn = false; gameActive = false;
-                if (winner === mySymbol) { statusMsg.innerText = "YOU WON!"; statusMsg.style.color = "#00ff00"; }
-                else { statusMsg.innerText = "YOU LOST"; statusMsg.style.color = "#ff0000"; }
-                if (winner) { const wl = checkWin(board, winner); if (wl) wl.forEach(i => cells[i].classList.add('win-highlight')); }
-                restartBtn.innerText = "Request Rematch"; restartBtn.disabled = false;
+                if (winner === mySymbol) {
+                    statusMsg.innerText = &quot;YOU WON! 🎉&quot;; statusMsg.style.color = &quot;#00ff00&quot;;
+                } else {
+                    statusMsg.innerText = &quot;YOU LOST 💀&quot;; statusMsg.style.color = &quot;#ff0000&quot;;
+                }
+                if (winner) {
+                    const winLine = checkWin(board, winner);
+                    if (winLine) winLine.forEach(i =&gt; cells[i].classList.add('win-highlight'));
+                }
+                restartBtn.innerText = &quot;Request Rematch&quot;; restartBtn.disabled = false;
             } else if (status === 'draw') {
                 restartBtn.style.display = 'block'; isMyTurn = false; gameActive = false;
-                statusMsg.innerText = "DRAW!"; statusMsg.style.color = "yellow";
-                restartBtn.innerText = "Request Rematch"; restartBtn.disabled = false;
+                statusMsg.innerText = &quot;DRAW GAME&quot;; statusMsg.style.color = &quot;yellow&quot;;
+                restartBtn.innerText = &quot;Request Rematch&quot;; restartBtn.disabled = false;
             }
         });
         socket.on('ttt:chat', ({ n, msg }) => {
             const div = document.createElement('div');
             div.className = 'chat-msg ' + (n === myName ? 'msg-me' : 'msg-opp');
-            div.innerText = msg; chatMsgs.appendChild(div); chatMsgs.scrollTop = chatMsgs.scrollHeight;
+            div.innerText = msg;
+            chatMsgs.appendChild(div);
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
         });
-        socket.on('ttt:error', msg => window.parent.postMessage({type:'notify',msg,nt:'error'},'*'));
-        socket.on('ttt:opponent-left', () => { statusMsg.innerText = "Opponent Disconnected!"; statusMsg.style.color = "red"; gameActive = false; });
+        socket.on('ttt:error', msg =&gt; window.parent.postMessage({type:'notify',msg,nt:'error'},'*'));
+        socket.on('ttt:opponent-left', () =&gt; {
+            statusMsg.innerText = &quot;Opponent Disconnected!&quot;;
+            statusMsg.style.color = &quot;red&quot;; gameActive = false;
+        });
 
-        // GAME LOGIC
-        function createRoom() { socket.emit('ttt:create', { playerName: myName }); }
+        // --- GAME LOGIC ---
+        function createRoom() {
+            socket.emit('ttt:create', { playerName: myName });
+        }
+
+        // Listen for auto-join from parent (invite accept)
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'auto-join' && e.data.code) {
-                document.getElementById('roomInput').value = e.data.code; joinRoom();
+                document.getElementById('roomInput').value = e.data.code;
+                joinRoom();
             }
         });
         function joinRoom() {
@@ -9515,33 +9561,58 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
             if (code.length !== 4) return window.parent.postMessage({type:'notify',msg:'Enter a valid 4-digit code!',nt:'error'},'*');
             mySymbol = 'O'; roomId = code;
             socket.emit('ttt:join', { code, playerName: myName });
-            enterGameUI(); statusMsg.innerText = "Connecting...";
+            enterGameUI();
+            statusMsg.innerText = &quot;Connecting...&quot;;
         }
+
         function enterGameUI() {
-            lobby.style.display = 'none'; gameArea.style.display = 'flex';
+            lobby.style.display = 'none';
+            gameArea.style.display = 'flex';
             displayCode.innerText = roomId;
-            chatMsgs.innerHTML = '<div style="text-align:center;color:#555;font-size:.8rem;">Game Chat</div>';
+            chatMsgs.innerHTML = '&lt;div style=&quot;text-align:center; color:#555; font-size:0.8rem;&quot;&gt;Game Chat Started&lt;/div&gt;';
         }
-        function tttBackBtn() { socket.disconnect(); window.parent.postMessage('spa-back','*'); }
-        function leaveGame(goBack) { socket.disconnect(); if (goBack) window.parent.postMessage('spa-back','*'); else location.reload(); }
+
+        // --- LEAVE &amp; CLEANUP ---
+        function tttBackBtn() {
+            socket.disconnect();
+            window.parent.postMessage('spa-back','*');
+        }
+        function leaveGame(goBack) {
+            socket.disconnect();
+            if (goBack) window.parent.postMessage('spa-back','*');
+            else location.reload();
+        }
+
+        // --- CHAT LOGIC ---
         function sendGameMessage() {
-            const input = document.getElementById('gameChatInput'), txt = input.value.trim();
+            const input = document.getElementById('gameChatInput');
+            const txt = input.value.trim();
             if (!txt || !roomId) return;
-            socket.emit('ttt:chat', { msg: txt }); input.value = "";
+            socket.emit('ttt:chat', { msg: txt });
+            input.value = &quot;&quot;;
         }
         function handleChatKey(e) { if (e.key === 'Enter') sendGameMessage(); }
-        function requestRematch() { socket.emit('ttt:rematch'); restartBtn.innerText = "Sent..."; restartBtn.disabled = true; }
-        function updateBoardUI(b) { cells.forEach((c,i) => { c.innerText = b[i]; c.className = 'cell ' + b[i]; }); }
+
+        // --- CORE GAME ---
+        function requestRematch() {
+            socket.emit('ttt:rematch');
+            restartBtn.innerText = &quot;Request Sent...&quot;;
+            restartBtn.disabled = true;
+        }
+
+        function updateBoardUI(b) {
+            cells.forEach((c, i) => {
+                c.innerText = b[i]; c.className = 'cell ' + b[i];
+            });
+        }
         function makeMove(i) {
             if (!isMyTurn || !gameActive) return;
-            if (document.getElementById('c'+i).innerText !== "") return;
+            if (document.getElementById('c' + i).innerText !== &quot;&quot;) return;
             socket.emit('ttt:move', { index: i });
         }
         function checkWin(b, p) {
-            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-            for (let w of wins) if (b[w[0]]===p && b[w[1]]===p && b[w[2]]===p) return w;
-            return null;
-        }
+            const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+            for (let w of wins) if (b[w[0]] === p &amp;&amp; b[w[1]] === p &amp;&amp; b[w[2]] === p) return w;
             return null;
         }
     </script>
@@ -9577,8 +9648,8 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
     &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot;&gt;
     &lt;title&gt;City Drift Online&lt;/title&gt;
     &lt;script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js&quot;&gt;&lt;/script&gt;
     &lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js&quot;&gt;&lt;/script&gt;
-    &lt;script src=&quot;https://cdn.socket.io/4.7.2/socket.io.min.js&quot;&gt;&lt;/script&gt;
     &lt;style&gt;
 
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:none;}
@@ -9642,6 +9713,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
         #chat-input{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;padding:7px 10px;font-size:.82rem;outline:none;}
         #chat-send{background:#00f3ff;color:#000;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:bold;}
     &lt;/style&gt;
+    &lt;script src=&quot;https://cdn.socket.io/4.7.2/socket.io.min.js&quot;&gt;&lt;/script&gt;
 
 &lt;/head&gt;
 &lt;body&gt;
@@ -10170,7 +10242,7 @@ function updatePhysics() {
     document.getElementById('speed-val').innerText = kmh;
     document.getElementById('gear-display').innerText = speed&gt;0.02?'D':speed&lt;-0.02?'R':'N';
 
-    // Socket.io sync (throttled to ~15fps)
+    // Socket sync (throttled ~15fps)
     const now=Date.now();
     if (roomId &amp;&amp; myId &amp;&amp; now-lastSync&gt;65) {
         lastSync=now;
@@ -10331,25 +10403,25 @@ socket.on('car:joined', ({ roomId: rid, myId: mid, players }) => {
     syncOtherPlayers(players);
     startGame(ROADS[1]+3, ROADS[1]+3);
 });
-socket.on('car:error', msg => { document.getElementById('lobby-status').innerText = msg; });
-socket.on('car:player-joined', ({ id, x, z, r, n, color }) => {
+socket.on('car:error', msg =&gt; { document.getElementById('lobby-status').innerText = msg; });
+socket.on('car:player-joined', ({ id, x, z, r, n, color }) =&gt; {
     if (!otherCars[id]) {
         const col = color || CAR_COLORS[Object.keys(otherCars).length % CAR_COLORS.length];
         otherCars[id] = createVehicle(col, n||id);
         otherCars[id].position.set(x||0, 0.4, z||0);
         scene.add(otherCars[id]);
-        document.getElementById('player-count').innerText = (Object.keys(otherCars).length+1) + ' player(s)';
+        document.getElementById('player-count').innerText = (Object.keys(otherCars).length+1)+' player(s)';
     }
 });
-socket.on('car:pos', ({ id, x, z, r }) => {
-    if (id === myId) return;
-    if (otherCars[id]) {
-        otherCars[id].userData.tx = x; otherCars[id].userData.tz = z; otherCars[id].userData.tr = r;
-    }
+socket.on('car:pos', ({ id, x, z, r }) =&gt; {
+    if (id === myId || !otherCars[id]) return;
+    otherCars[id].userData.tx = x;
+    otherCars[id].userData.tz = z;
+    otherCars[id].userData.tr = r;
 });
-socket.on('car:player-left', ({ id }) => {
+socket.on('car:player-left', ({ id }) =&gt; {
     if (otherCars[id]) { scene.remove(otherCars[id]); delete otherCars[id]; }
-    document.getElementById('player-count').innerText = (Object.keys(otherCars).length+1) + ' player(s)';
+    document.getElementById('player-count').innerText = (Object.keys(otherCars).length+1)+' player(s)';
 });
 
 function startGame(spawnX, spawnZ) {
@@ -10405,12 +10477,11 @@ function listenChat(){
         var div=document.createElement('div');
         div.style.cssText='margin-bottom:4px;font-size:.82rem;word-break:break-word;';
         var isMe=d.n===playerName;
-        div.innerHTML='<span style="color:'+(isMe?'#00f3ff':'#2ecc71')+';font-weight:bold;">'+d.n+':</span> <span style="color:rgba(255,255,255,.85);">'+d.msg+'</span>';
+        div.innerHTML='&lt;span style=&quot;color:'+(isMe?'#00f3ff':'#2ecc71')+';font-weight:bold;&quot;&gt;'+d.n+':&lt;/span&gt; &lt;span style=&quot;color:rgba(255,255,255,.85);&quot;&gt;'+d.msg+'&lt;/span&gt;';
         msgDiv.appendChild(div);msgDiv.scrollTop=msgDiv.scrollHeight;
-        if(!chatOpen){uc++;unread.style.display='flex';unread.innerText=uc>9?'9+':uc;}
+        if(!chatOpen){uc++;unread.style.display='flex';unread.innerText=uc&gt;9?'9+':uc;}
     });
 }
-{if(!roomId)return;var msgDiv=document.getElementById('chat-messages');var unread=document.getElementById('chat-unread');var uc=0;db.ref('car_world/'+roomId+'/chat').limitToLast(30).on('child_added',function(snap){var d=snap.val();var div=document.createElement('div');div.style.cssText='margin-bottom:4px;font-size:.82rem;word-break:break-word;';var isMe=d.n===playerName;div.innerHTML='&lt;span style=&quot;color:'+(isMe?'#00f3ff':'#2ecc71')+';font-weight:bold;&quot;&gt;'+d.n+':&lt;/span&gt; &lt;span style=&quot;color:rgba(255,255,255,.85);&quot;&gt;'+d.msg+'&lt;/span&gt;';msgDiv.appendChild(div);msgDiv.scrollTop=msgDiv.scrollHeight;if(!chatOpen){uc++;unread.style.display='flex';unread.innerText=uc&gt;9?'9+':uc;}});}
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&amp;&amp;chatOpen){sendChat();e.preventDefault();}if(e.key==='Escape'&amp;&amp;chatOpen){toggleChat();}});
 // AUTO-JOIN FROM INVITE
 // ═══════════════════════════════════════════════════════════
