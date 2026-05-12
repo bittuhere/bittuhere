@@ -62,6 +62,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
         *,
         *::before,
@@ -612,13 +613,74 @@
             animation: notifRing 1.2s ease-in-out infinite;
         }
 
-        .hub-lb-btn {
+        /* ── Row 1 right: Profile (primary action) ── */
+        .hub-profile-btn {
             position: fixed;
             top: 20px;
             right: 20px;
+            background: rgba(0, 243, 255, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            color: #00f3ff;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            z-index: 200;
+            cursor: pointer;
+            font-size: 0.9rem;
+            touch-action: manipulation;
+        }
+
+        .hub-profile-btn:hover {
+            background: #00f3ff;
+            border-color: transparent;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* ── Row 2 left: Notifications ── */
+        .notif-btn {
+            position: fixed;
+            top: 67px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            z-index: 200;
+            cursor: pointer;
+        }
+
+        .notif-btn:hover {
+            background: #2ecc71;
+            border-color: transparent;
+            color: #000;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* ── Row 2 right: Leaderboard (secondary) ── */
+        .hub-lb-btn {
+            position: fixed;
+            top: 67px;
+            right: 20px;
             background: rgba(255, 215, 0, 0.1);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 215, 0, 0.3);
             color: #ffcc00;
             padding: 10px 20px;
@@ -639,59 +701,6 @@
             transform: translateY(-2px);
         }
 
-        .notif-btn {
-            position: fixed;
-            top: 67px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: var(--text-main);
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            z-index: 200;
-            cursor: pointer;
-        }
-
-        .hub-profile-btn {
-            position: fixed;
-            top: 67px;
-            right: 20px;
-            background: rgba(0, 20, 30, 0.92);
-            border: 1px solid rgba(0, 243, 255, 0.25);
-            color: #00f3ff;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: transform 0.18s;
-            z-index: 200;
-            cursor: pointer;
-            font-size: 0.9rem;
-            touch-action: manipulation;
-        }
-
-        .hub-profile-btn:hover {
-            background: rgba(0, 243, 255, 0.15);
-            border-color: #00f3ff;
-            transform: translateY(-2px);
-        }
-
-        .notif-btn:hover {
-            background: #32a852;
-            border-color: transparent;
-            box-shadow: 0 0 15px #32a852;
-            transform: translateY(-2px);
-        }
-
         .red-dot {
             position: absolute;
             top: 0px;
@@ -709,14 +718,24 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            /* Add these lines for smooth transitions */
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding-top: 116px;
+            padding-right: 20px;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+            transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+        }
+
+        #notif-modal.show {
+            display: flex;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.25s ease, visibility 0s linear 0s;
         }
 
         .spa-section {
@@ -750,28 +769,237 @@
 
         #notif-modal.show {
             display: flex;
-            /* override display to flex when shown */
             opacity: 1;
             visibility: visible;
-            transition: opacity 0.3s ease, visibility 0s linear 0s;
+            transition: opacity 0.25s ease, visibility 0s linear 0s;
         }
 
         .notif-content {
-            background: #1a1a2e;
-            padding: 20px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 400px;
-            border: 1px solid #2ecc71;
+            background: linear-gradient(160deg, #0d1b2a 0%, #0a0a1a 100%);
+            border-radius: 20px;
+            width: min(420px, 95vw);
+            border: 1px solid rgba(0, 243, 255, 0.2);
             color: white;
-            /* Add scale transition for content */
-            transform: scale(0.9);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);
+            transform: translateY(-12px) scale(0.96);
             transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            max-height: calc(100vh - 140px);
+            display: flex;
+            flex-direction: column;
         }
 
         #notif-modal.show .notif-content {
-            transform: scale(1);
+            transform: translateY(0) scale(1);
         }
+
+        /* Header */
+        .notif-header {
+            background: linear-gradient(90deg, rgba(0,243,255,0.08), rgba(46,204,113,0.08));
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .notif-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notif-header-icon {
+            font-size: 1.5rem;
+            animation: bellRing 3s ease-in-out infinite;
+        }
+
+        @keyframes bellRing {
+            0%, 80%, 100% { transform: rotate(0); }
+            85% { transform: rotate(15deg); }
+            90% { transform: rotate(-12deg); }
+            95% { transform: rotate(8deg); }
+        }
+
+        .notif-header h3 {
+            margin: 0;
+            font-family: 'Teko', sans-serif;
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            color: #fff;
+        }
+
+        .notif-unread-badge {
+            background: linear-gradient(135deg, #ff3366, #ff6b35);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 20px;
+            font-family: 'Segoe UI', sans-serif;
+            letter-spacing: 0;
+            min-width: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .notif-close-x {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.6);
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .notif-close-x:hover { background: #ff3366; border-color: transparent; color: white; }
+
+        /* Tabs */
+        .notif-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+
+        .notif-tab {
+            flex: 1;
+            padding: 11px 10px;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.45);
+            font-family: 'Teko', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: 0.2s;
+            border-bottom: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .notif-tab.active {
+            color: #00f3ff;
+            border-bottom-color: #00f3ff;
+            background: rgba(0,243,255,0.05);
+        }
+
+        .notif-tab:hover:not(.active) {
+            color: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.04);
+        }
+
+        /* Message list */
+        #notif-messages {
+            overflow-y: auto;
+            flex: 1;
+            padding: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,243,255,0.3) transparent;
+        }
+        #notif-messages::-webkit-scrollbar { width: 4px; }
+        #notif-messages::-webkit-scrollbar-track { background: transparent; }
+        #notif-messages::-webkit-scrollbar-thumb { background: rgba(0,243,255,0.3); border-radius: 4px; }
+
+        /* Notification item */
+        .notif-item {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            padding: 12px 14px;
+            border-left: 3px solid #2ecc71;
+            transition: background 0.2s, transform 0.15s;
+            animation: notifSlideIn 0.3s ease-out;
+        }
+
+        @keyframes notifSlideIn {
+            from { opacity: 0; transform: translateX(12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .notif-item:hover { background: rgba(255,255,255,0.07); transform: translateX(-2px); }
+        .notif-item.private { border-left-color: #a855f7; }
+        .notif-item:last-child { margin-bottom: 0; }
+
+        .notif-item-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .notif-item-badge {
+            font-size: 0.62rem;
+            font-weight: 800;
+            font-family: 'Segoe UI', sans-serif;
+            letter-spacing: 1px;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .notif-item-badge.global-badge {
+            background: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .notif-item-badge.private-badge {
+            background: rgba(168, 85, 247, 0.15);
+            color: #a855f7;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .notif-item-msg {
+            font-size: 0.92rem;
+            color: rgba(255,255,255,0.88);
+            line-height: 1.45;
+            font-family: 'Segoe UI', sans-serif;
+            word-break: break-word;
+        }
+
+        .notif-time {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.35);
+            margin-top: 6px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .notif-empty {
+            text-align: center;
+            padding: 36px 20px;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .notif-empty-icon { font-size: 2.5rem; margin-bottom: 10px; opacity: 0.5; }
+        .notif-empty-text { font-size: 0.85rem; font-family: 'Segoe UI', sans-serif; }
+
+        /* Footer */
+        .notif-footer {
+            padding: 10px 12px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+
+        .notif-close-btn {
+            width: 100%;
+            padding: 11px;
+            background: linear-gradient(90deg, rgba(0,243,255,0.12), rgba(46,204,113,0.12));
+            border: 1px solid rgba(0,243,255,0.25);
+            color: #00f3ff;
+            font-family: 'Teko', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 2px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        .notif-close-btn:hover { background: #00f3ff; color: #000; border-color: transparent; }
 
         .hub-inner {
             display: flex;
@@ -1624,41 +1852,101 @@
         }
 
         /* Mobile: sidebar & chat-area each fill full dynamic viewport height */
-        @media(max-width:600px) {
-            .sidebar {
-                width: 100%;
-                min-width: unset;
-                height: 100dvh;
-                padding: 15px;
-            }
+        /* ═══════════════════════════════════════════
+           RESPONSIVE / MOBILE OPTIMISATION
+           Buttons layout:
+             Row 1 left:  .hub-friends-btn  (top:20px, left:20px)
+             Row 1 right: .hub-profile-btn  (top:20px, right:20px) ← primary
+             Row 2 left:  .notif-btn        (top:67px, left:20px)
+             Row 2 right: .hub-lb-btn       (top:67px, right:20px)
+           ═══════════════════════════════════════════ */
 
-            .chat-area {
-                display: none;
-                width: 100%;
-                height: 100dvh;
+        /* ── Tablets / large phones (≤ 768px) ── */
+        @media (max-width: 768px) {
+            .hub-inner            { padding: 120px 0.75rem 1rem; }
+            .hub-container        { padding: 1.5rem 1.2rem; border-radius: 18px; max-width: 100%; }
+            .hub-container h1     { font-size: 2rem; }
+            .login-card           { padding: 2rem 1.5rem; }
+            .login-card h1        { font-size: 2.8rem; }
+            .game-list-grid       { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .game-btn             { padding: 14px 10px; font-size: 1rem; }
+            /* All 4 hub buttons — compact sizing only, positions unchanged */
+            .hub-friends-btn, .hub-profile-btn,
+            .notif-btn, .hub-lb-btn {
+                padding: 8px 14px;
+                font-size: .85rem;
+                border-radius: 22px;
             }
+            /* Notification panel — shift left so it isn't clipped */
+            #notif-modal { padding-right: 10px; }
+        }
 
-            .game-list-grid {
-                grid-template-columns: 1fr;
-            }
+        /* ── Small phones (≤ 480px) ── */
+        @media (max-width: 480px) {
+            .hub-inner          { padding: 115px 0.5rem 0.5rem; }
+            .hub-container      { padding: 1.2rem 1rem; border-radius: 14px; }
+            .hub-container h1   { font-size: 1.7rem; letter-spacing: 1px; }
+            .hub-container p    { font-size: .85rem; }
+            .game-list-grid     { grid-template-columns: 1fr; gap: 10px; }
+            .full-width         { grid-column: span 1; }
 
-            .full-width {
-                grid-column: span 1;
-            }
+            /* Row 1: Friends (left) | Profile (right) */
+            .hub-friends-btn    { padding: 7px 11px; font-size: .8rem; top: 14px; left: 8px; }
+            .hub-profile-btn    { padding: 7px 11px; font-size: .78rem; top: 14px; right: 8px; }
+            /* Row 2: Notif (left) | Leaderboard (right) */
+            .notif-btn          { padding: 7px 11px; font-size: .78rem; top: 57px; left: 8px; }
+            .hub-lb-btn         { padding: 7px 11px; font-size: .78rem; top: 57px; right: 8px; }
 
+            .login-card         { padding: 1.5rem 1rem; border-radius: 14px; }
+            .login-card h1      { font-size: 2.4rem; }
+            .login-card input, .l-btn { padding: 12px; font-size: .95rem; }
+
+            #notify-container   { top: 10px; right: 8px; left: 8px; }
+            .notify-toast       { max-width: 100%; font-size: 1rem; padding: 11px 14px; }
+            #confirm-box, #chgpass-box { padding: 1.4rem 1rem; width: 95%; }
+            .lb-panel, .profile-panel  { width: 98vw; max-width: 98vw; border-radius: 14px; }
+
+            .admin-section-inner { padding: 0.5rem; }
+            .admin-header-bar   { gap: 6px; flex-wrap: wrap; padding: 8px; }
+            .admin-btn          { padding: 6px 10px; font-size: .78rem; }
+            .quiz-card          { padding: 1rem 0.8rem; border-radius: 14px; }
+            .quiz-opt           { padding: 12px 10px; font-size: .9rem; }
+            .fair-grid          { grid-template-columns: 1fr !important; }
+
+            /* Notification panel full width on small phones */
+            #notif-modal        { padding-top: 104px; padding-right: 8px; }
+            .notif-content      { width: calc(100vw - 16px); }
+        }
+
+        /* ── Very small phones (≤ 360px) — icon-only buttons ── */
+        @media (max-width: 360px) {
+            .hub-friends-btn,
+            .hub-profile-btn,
+            .notif-btn,
             .hub-lb-btn {
-                padding: 8px 15px;
-                font-size: .9rem;
-                top: 20px;
-                right: 10px;
+                padding: 8px 9px;
+                min-width: 38px;
+                justify-content: center;
+                gap: 0;
+                font-size: 1rem;
             }
+            /* Hide text labels, keep emoji/icon */
+            .hub-friends-btn .btn-label,
+            .hub-profile-btn .btn-label,
+            .notif-btn .btn-label,
+            .hub-lb-btn .btn-label { display: none; }
 
-            .hub-friends-btn {
-                padding: 8px 15px;
-                font-size: .9rem;
-                top: 20px;
-                left: 10px;
-            }
+            .login-card h1 { font-size: 2rem; }
+            #notif-modal { padding-top: 104px; padding-right: 6px; }
+            .notif-content { width: calc(100vw - 12px); }
+        }
+
+        /* ── Chat / Friends layout (≤ 600px) ── */
+        @media (max-width: 600px) {
+            .sidebar   { width: 100%; min-width: unset; height: 100dvh; padding: 15px; }
+            .chat-area { display: none; width: 100%; height: 100dvh; }
+            .game-list-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
         }
 
         body.chatting .sidebar {
@@ -3644,7 +3932,10 @@
             <h1 id="login-header">LOGIN</h1>
             <p id="login-sub">Enter the Arcade World</p>
             <form id="login-form" autocomplete="on" onsubmit="processAuth();return false;" style="display:contents;">
-                <input type="text" id="login-username" name="username" placeholder="Username" autocomplete="username">
+                <input type="text" id="login-username" name="username" placeholder="Username or Email" autocomplete="username">
+                <!-- Email field — only shown in signup mode -->
+                <input type="email" id="login-email" name="email" placeholder="Email address (required)"
+                    autocomplete="email" style="display:none;">
                 <div style="position:relative;">
                     <input type="password" id="login-password" name="password" placeholder="Password"
                         autocomplete="current-password">
@@ -3659,9 +3950,91 @@
                 <div class="status-msg" id="login-status"></div>
                 <div id="trouble-link" class="trouble-link" onclick="goToTroubleshoot()">Trouble signing in? Click here
                 </div>
+                <!-- Forgot password — only in login mode -->
+                <div id="forgot-link" style="text-align:center;margin-top:-6px;margin-bottom:4px;display:block;">
+                    <span onclick="openForgotPassword()" style="color:#00f3ff;font-size:.8rem;cursor:pointer;opacity:.7;letter-spacing:1px;">Forgot Password?</span>
+                </div>
                 <button class="l-btn btn-go" type="submit" id="submit-btn">ENTER</button>
             </form>
+            <!-- Google Sign In -->
+            <div style="display:flex;align-items:center;gap:10px;margin:10px 0;">
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.15);"></div>
+                <span style="color:rgba(255,255,255,.35);font-size:.75rem;letter-spacing:1px;">OR</span>
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.15);"></div>
+            </div>
+            <button onclick="googleSignIn()" id="google-btn"
+                style="width:100%;padding:11px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:Teko,sans-serif;font-size:1.05rem;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:.2s;"
+                onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
+                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19.1 13 24 13c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.4 35.5 26.8 36.5 24 36.5c-5.2 0-9.7-3.4-11.3-8.1l-6.6 5.1C9.6 39.6 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.3 4.1-4.2 5.4l6.2 5.2C41.5 35.8 44 30.3 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+                <span id="google-btn-text">CONTINUE WITH GOOGLE</span>
+            </button>
             <span class="switch-link" onclick="toggleMode()" id="switch-btn">New here? Create ID</span>
+        </div>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    <div id="forgot-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0d0b22;border:1px solid rgba(0,243,255,.3);border-radius:20px;padding:28px;max-width:380px;width:100%;">
+            <h2 style="color:#00f3ff;letter-spacing:3px;margin:0 0 6px;">🔑 RESET PASSWORD</h2>
+            <p id="forgot-step-desc" style="color:rgba(255,255,255,.5);font-size:.85rem;margin:0 0 18px;">Enter your email to receive a reset code.</p>
+            <!-- Step 1: Email input -->
+            <div id="forgot-step1">
+                <input id="forgot-email" type="email" placeholder="Your registered email" autocomplete="email"
+                    style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,243,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:1rem;margin-bottom:10px;box-sizing:border-box;">
+                <button onclick="forgotSendCode()"
+                    style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(90deg,#00f3ff,#0066ff);color:#000;font-family:Teko,sans-serif;font-size:1.1rem;font-weight:700;letter-spacing:2px;cursor:pointer;">SEND CODE</button>
+            </div>
+            <!-- Step 2: Code + new password -->
+            <div id="forgot-step2" style="display:none;">
+                <input id="forgot-code" type="text" placeholder="6-digit code from email" maxlength="6" inputmode="numeric"
+                    style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,243,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:1.2rem;letter-spacing:6px;text-align:center;margin-bottom:10px;box-sizing:border-box;">
+                <input id="forgot-newpass" type="password" placeholder="New password (min 3 chars)"
+                    style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,243,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:1rem;margin-bottom:10px;box-sizing:border-box;">
+                <button onclick="forgotVerifyCode()"
+                    style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(90deg,#00f3ff,#0066ff);color:#000;font-family:Teko,sans-serif;font-size:1.1rem;font-weight:700;letter-spacing:2px;cursor:pointer;">RESET PASSWORD</button>
+            </div>
+            <div id="forgot-status" style="margin-top:10px;font-size:.85rem;text-align:center;min-height:18px;"></div>
+            <button onclick="closeForgotPassword()"
+                style="width:100%;padding:10px;border:1px solid rgba(255,255,255,.15);border-radius:10px;background:transparent;color:rgba(255,255,255,.5);font-family:Teko,sans-serif;font-size:1rem;cursor:pointer;margin-top:10px;">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- EMAIL VERIFY PAGE (full SPA section) -->
+    <div id="section-verify-email" class="spa-section hidden-right"
+        style="background:var(--bg-gradient);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;">
+        <div class="login-card" style="text-align:center;">
+            <div style="font-size:3rem;margin-bottom:4px;line-height:1;">&#9993;</div>
+            <h1 style="letter-spacing:3px;margin:0 0 6px;">VERIFY EMAIL</h1>
+            <p id="verify-page-desc" style="color:rgba(255,255,255,.55);font-size:.88rem;margin:0 0 20px;line-height:1.5;"></p>
+            <input id="verify-code-input" type="text" placeholder="6-digit code" maxlength="6" inputmode="numeric"
+                style="width:100%;padding:14px;border-radius:12px;border:1px solid rgba(0,243,255,.35);background:rgba(0,0,0,.3);color:#00f3ff;font-size:1.8rem;letter-spacing:12px;text-align:center;box-sizing:border-box;margin-bottom:12px;font-family:monospace;">
+            <button onclick="verifyConfirmCode()" class="l-btn btn-go" style="margin-bottom:10px;">VERIFY &amp; CONTINUE</button>
+            <div id="verify-status" style="font-size:.84rem;min-height:20px;margin-bottom:8px;"></div>
+            <span onclick="verifyResendCode()" style="color:rgba(0,243,255,.6);font-size:.8rem;cursor:pointer;letter-spacing:1px;">Resend code</span>
+            <br>
+            <span onclick="verifyCancel()" style="color:rgba(255,255,255,.25);font-size:.75rem;cursor:pointer;margin-top:10px;display:inline-block;letter-spacing:1px;">Cancel &amp; go back</span>
+        </div>
+    </div>
+
+    <!-- GOOGLE PROFILE SETUP PAGE (full SPA section) -->
+    <div id="section-google-setup" class="spa-section hidden-right"
+        style="background:var(--bg-gradient);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;">
+        <div class="login-card">
+            <div style="text-align:center;margin-bottom:4px;">
+                <svg width="32" height="32" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19.1 13 24 13c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.4 35.5 26.8 36.5 24 36.5c-5.2 0-9.7-3.4-11.3-8.1l-6.6 5.1C9.6 39.6 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.3 4.1-4.2 5.4l6.2 5.2C41.5 35.8 44 30.3 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+            </div>
+            <h1 style="letter-spacing:3px;margin:0 0 4px;text-align:center;">COMPLETE PROFILE</h1>
+            <p id="google-setup-email-label" style="color:rgba(0,243,255,.6);font-size:.8rem;text-align:center;margin:0 0 18px;letter-spacing:1px;"></p>
+            <input type="text" id="gsetup-username" placeholder="Choose a username (a-z 0-9)"
+                style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,243,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:1rem;box-sizing:border-box;margin-bottom:10px;">
+            <input type="password" id="gsetup-password" placeholder="Set a password (min 3 chars)"
+                style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,243,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:1rem;box-sizing:border-box;margin-bottom:10px;">
+            <input type="password" id="gsetup-confirm" placeholder="Confirm password"
+                style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,243,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:1rem;box-sizing:border-box;margin-bottom:10px;">
+            <div class="spin-loader" id="gsetup-loader"></div>
+            <div id="gsetup-status" style="font-size:.84rem;min-height:20px;margin-bottom:10px;text-align:center;"></div>
+            <button onclick="googleSetupComplete()" class="l-btn btn-go">CREATE ACCOUNT</button>
+            <span onclick="googleSetupCancel()" style="display:block;text-align:center;color:rgba(255,255,255,.25);font-size:.75rem;cursor:pointer;margin-top:12px;letter-spacing:1px;">Cancel</span>
         </div>
     </div>
 
@@ -3683,28 +4056,38 @@
     <!-- HUB -->
     <div id="section-hub" class="spa-section hidden-right" style="background:var(--bg-gradient);">
         <button class="hub-friends-btn" onclick="MapsTo('section-chat','right')">
-            &#128101; Friends <div id="chat-notif-dot"></div>
+            &#128101; <span class="btn-label">Friends</span> <div id="chat-notif-dot"></div>
         </button>
-        <div class="notif-btn" onclick="openNotifications()">&#128276; <div id="notif-dot" class="red-dot"></div>
+        <div class="notif-btn" onclick="openNotifications()">&#128276; <span class="btn-label">Notifs</span> <div id="notif-dot" class="red-dot"></div>
         </div>
-        <div class="hub-profile-btn" onclick="openMyProfile()">👤 Profile</div>
-        <div class="hub-lb-btn" onclick="MapsTo('section-leaderboard','right')">&#127942; Leaderboard</div>
+        <div class="hub-profile-btn" onclick="openMyProfile()">👤 <span class="btn-label">Profile</span></div>
+        <div class="hub-lb-btn" onclick="MapsTo('section-leaderboard','right')">&#127942; <span class="btn-label">Leaderboard</span></div>
         <div id="notif-modal" onclick="closeNotifications()">
-            <div class="notif-content" onclick="event.stopPropagation()"
-                style="max-width:450px; padding:0; overflow:hidden;">
-                <div
-                    style="background:rgba(0,0,0,0.3); padding:15px 20px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                    <h3 style="margin:0;">📢 Notifications</h3>
+            <div class="notif-content" onclick="event.stopPropagation()">
+                <!-- Header -->
+                <div class="notif-header">
+                    <div class="notif-header-left">
+                        <span class="notif-header-icon">🔔</span>
+                        <h3>NOTIFICATIONS</h3>
+                        <span class="notif-unread-badge" id="notif-unread-count"></span>
+                    </div>
+                    <button class="notif-close-x" onclick="closeNotifications()" aria-label="Close">✕</button>
                 </div>
-                <div style="display:flex; border-bottom:1px solid #333;">
-                    <button id="notif-tab-global" class="notif-tab active" onclick="switchNotifTab('global')">🌐
-                        Global</button>
-                    <button id="notif-tab-private" class="notif-tab" onclick="switchNotifTab('private')">🔒
-                        Private</button>
+                <!-- Tabs -->
+                <div class="notif-tabs">
+                    <button id="notif-tab-global" class="notif-tab active" onclick="switchNotifTab('global')">
+                        🌐 Global
+                    </button>
+                    <button id="notif-tab-private" class="notif-tab" onclick="switchNotifTab('private')">
+                        🔒 Private
+                    </button>
                 </div>
-                <div id="notif-messages" style="max-height:300px; overflow-y:auto; padding:12px;"></div>
-                <button onclick="closeNotifications()"
-                    style="width:100%; padding:12px; background:#2ecc71; border:none; color:white; font-weight:bold; cursor:pointer;">CLOSE</button>
+                <!-- List -->
+                <div id="notif-messages"></div>
+                <!-- Footer -->
+                <div class="notif-footer">
+                    <button class="notif-close-btn" onclick="closeNotifications()">✕ CLOSE</button>
+                </div>
             </div>
         </div>
         <div class="hub-inner">
@@ -4189,13 +4572,19 @@
             }
             tbody.innerHTML=filteredUsers.map(function(u){
                 var bl=!!u.blocked;
+                var evOff = u.email_verification === false;
                 var j=u.createdAt?new Date(u.createdAt).toLocaleDateString('en-IN'):'—';
-                return '<tr><td style="color:'+(bl?'#e74c3c':'white')+';">'+u.id+'</td>'+
+                var emailBadge = u.email
+                    ? '<span style="font-size:.65rem;padding:1px 5px;border-radius:8px;background:' + (u.emailVerified?'rgba(46,204,113,.2)':'rgba(241,196,15,.2)') + ';color:' + (u.emailVerified?'#2ecc71':'#f1c40f') + ';margin-left:3px;">' + (u.emailVerified?'&#10003;':'pending') + '</span>'
+                    : '<span style="font-size:.65rem;padding:1px 5px;border-radius:8px;background:rgba(231,76,60,.15);color:#e74c3c;margin-left:3px;">no email</span>';
+                return '<tr><td style="color:'+(bl?'#e74c3c':'white')+';">'+u.id+emailBadge+'</td>'+
                     '<td style="text-align:center;"><span style="font-size:.7rem;padding:2px 7px;border-radius:10px;background:'+(bl?'rgba(231,76,60,.2)':'rgba(46,204,113,.2)')+';color:'+(bl?'#e74c3c':'#2ecc71')+'">'+(bl?'BLOCKED':'ACTIVE')+'</span></td>'+
                     '<td style="font-size:.74rem;color:#888;">'+j+'</td>'+
                     '<td style="white-space:nowrap;">'+
                     '<button onclick="adminToggleBlock(\''+u.id+'\','+(bl?'false':'true')+')" style="background:'+(bl?'#2ecc71':'#e74c3c')+';border:none;color:'+(bl?'#000':'#fff')+';padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.74rem;margin:2px;">'+(bl?'UNBLOCK':'BLOCK')+'</button>'+
                     '<button onclick="adminResetPass(\''+u.id+'\')" style="background:#3498db;border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.74rem;margin:2px;">RESET PW</button>'+
+                    '<button onclick="adminToggleEmailVerif(\''+u.id+'\','+(evOff?'true':'false')+')" style="background:'+(evOff?'#8e44ad':'#2c3e50')+';border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.74rem;margin:2px;" title="'+(evOff?'Email verif disabled':'Email verif required')+'">[E]'+(evOff?'ON':'OFF')+'</button>'+
+                    '<button onclick="adminStrictVerify(\''+u.id+'\')" style="background:#e67e22;border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.74rem;margin:2px;" title="Force user to re-verify email on next login. No skip allowed.">FORCE VERIFY</button>'+
                     '</td></tr>';
             }).join('')||'<tr><td colspan="4" style="text-align:center;padding:14px;color:#888;">No users.</td></tr>';
         }
@@ -4206,11 +4595,30 @@
         window.adminToggleBlock = function(uid,state) {
             if(!_isRealAdmin()) return;
             state=(state==='true'||state===true);
-            showConfirm((state?'🚫 BLOCK':'✅ UNBLOCK')+' user "'+uid+'"?', function(){
+            showConfirm((state?'BLOCK':'UNBLOCK')+' user "'+uid+'"?', function(){
                 db.ref('users/'+uid).update({blocked:state,_admin:true,_adminKey:ADMIN_KEY})
-                    .then(function(){ showNotify((state?'🚫 Blocked: ':'✅ Unblocked: ')+uid,state?'error':'success'); adminLoadUsers(); })
-                    .catch(function(e){ showNotify('❌ '+e.message,'error'); });
-            }, state?'🚫':'✅');
+                    .then(function(){ showNotify((state?'Blocked: ':'Unblocked: ')+uid,state?'error':'success'); adminLoadUsers(); })
+                    .catch(function(e){ showNotify('Error: '+e.message,'error'); });
+            }, state?'X':'OK');
+        };
+        window.adminToggleEmailVerif = function(uid, enable) {
+            if(!_isRealAdmin()) return;
+            enable = (enable==='true'||enable===true);
+            var label = enable ? 'Re-enable email verification' : 'Disable email verification';
+            showConfirm(label+' for "'+uid+'"?', function(){
+                var upd = enable ? { email_verification: null } : { email_verification: false };
+                db.ref('users/'+uid).update(upd)
+                    .then(function(){ showNotify('Email verification '+(enable?'ON':'OFF')+': '+uid,'success'); adminLoadUsers(); })
+                    .catch(function(e){ showNotify('Error: '+e.message,'error'); });
+            }, '[E]');
+        };
+        window.adminStrictVerify = function(uid) {
+            if(!_isRealAdmin()) return;
+            showConfirm('Force "'+uid+'" to verify email on next login? They will NOT be able to skip.', function(){
+                db.ref('users/'+uid).update({ emailVerified: false, email_verification: null, forceVerify: true })
+                    .then(function(){ showNotify('Force verify set for: '+uid,'success'); adminLoadUsers(); })
+                    .catch(function(e){ showNotify('Error: '+e.message,'error'); });
+            }, '!');
         };
         window.adminResetPass = function(uid) {
             if(!_isRealAdmin()) return;
@@ -4840,8 +5248,7 @@
                 db.ref('users/' + checkId).once('value', snap => {
                     if (!snap.exists()) {
                         window.parent.postMessage({type:'notify',msg:'⛔ Access denied! Please re-login.',nt:'error'},'*');
-                        localStorage.removeItem('isLoggedIn');
-                        localStorage.removeItem('playerName');
+                        localStorage.clear();
                         window.parent.postMessage('spa-back','*');
                     }
                 });
@@ -5348,8 +5755,7 @@
                 db.ref('users/' + checkId).once('value', snap => {
                     if (!snap.exists()) {
                         window.parent.postMessage({type:'notify',msg:'⛔ Access denied! Please re-login.',nt:'error'},'*');
-                        localStorage.removeItem('isLoggedIn');
-                        localStorage.removeItem('playerName');
+                        localStorage.clear();
                         window.parent.postMessage('spa-back','*');
                     }
                 });
@@ -5864,23 +6270,30 @@ function saveFlappyScoreToCloud(finalScore) {
     <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot;>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&amp;display=swap');
+        * { box-sizing: border-box; }
         body {
-    margin: 0;
-    background: black;
-    color: white;
-    font-family: 'Teko', sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;      /* was height: 100vh */
-    overflow-y: auto;       /* was overflow: hidden */
-    padding: 20px;          /* adds a little breathing room */
-    box-sizing: border-box;
-}
+            margin: 0;
+            padding: 0;
+            background: black;
+            color: white;
+            font-family: 'Teko', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
         #game-container {
             position: relative;
-            width: 100%;
-            max-width: 608px;
+            /*
+             * Fit into viewport by BOTH width and height simultaneously.
+             * Board is 608 × 672 px (19×32 cols, 21×32 rows).
+             * min() picks whichever constraint is tighter:
+             *   - 100vw  → constrain by screen width
+             *   - (100vh - 8px) * 608/672 → constrain by screen height keeping ratio
+             *   - 608px  → never exceed native size
+             */
+            width: min(calc(100vw - 4px), calc((100vh - 8px) * 608 / 672), 608px);
             border: 4px solid  #CFFF04;
             box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
         }
@@ -5889,6 +6302,18 @@ function saveFlappyScoreToCloud(finalScore) {
             display: block;
             width: 100%;
             height: auto;
+        }
+        /* Score sits on top of the canvas, not above it */
+        #game-container h2 {
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            margin: 0;
+            z-index: 40;
+            font-size: 1.2rem;
+            color: #CFFF04;
+            text-shadow: 0 0 8px #CFFF04;
+            pointer-events: none;
         }
         .overlay {
             position: absolute;
@@ -6817,10 +7242,10 @@ function saveFlappyScoreToCloud(finalScore) {
     </div>
     <div id="section-game-car" allow="fullscreen; screen-orientation" class="spa-section hidden-right game-frame">
         <div class="game-section-wrapper">
-            <iframe id="iframe-car" srcdoc="<!DOCTYPE html>
-<html lang=&quot;en&quot;>
-<head>
-    <script>
+            <iframe id="iframe-car" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;script&gt;
         // SECURITY CHECK &amp; FIREBASE VERIFICATION
         const storedName = localStorage.getItem('playerName');
         
@@ -6830,23 +7255,22 @@ function saveFlappyScoreToCloud(finalScore) {
         } else {
             // Extra Protection: Check if user actually exists in Firebase
             const checkId = storedName.toLowerCase().trim();
-            if (typeof db !== 'undefined' && db) {
-                db.ref('users/' + checkId).once('value', snap => {
+            if (typeof db !== 'undefined' &amp;&amp; db) {
+                db.ref('users/' + checkId).once('value', snap =&gt; {
                     if (!snap.exists()) {
                         window.parent.postMessage({type:'notify',msg:'⛔ Access denied! Please re-login.',nt:'error'},'*');
-                        localStorage.removeItem('isLoggedIn');
-                        localStorage.removeItem('playerName');
+                        localStorage.clear();
                         window.parent.postMessage('spa-back','*');
                     }
                 });
             }
         }
-    </script>
-<meta charset=&quot;UTF-8&quot;>
-<meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1,user-scalable=no&quot;>
-<title>Real City Drift – Balanced Edition</title>
+    &lt;/script&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1,user-scalable=no&quot;&gt;
+&lt;title&gt;Real City Drift – Balanced Edition&lt;/title&gt;
 
-<style>
+&lt;style&gt;
 body{margin:0;overflow:hidden;background:#87ceeb;font-family:sans-serif}
 #game{position:fixed;inset:0}
 #ui{position:fixed;inset:0;pointer-events:none}
@@ -6877,35 +7301,35 @@ margin-right:10px;font-size:1.5rem
 width:55px;height:95px;border-radius:10px;
 margin-left:10px
 }
-</style>
+&lt;/style&gt;
 
-<script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js&quot;></script>
-</head>
-<body><style>#spabk{position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.8);color:#00f3ff;border:1px solid #00f3ff;padding:8px 18px;border-radius:20px;cursor:pointer;font-family:Segoe UI,sans-serif;font-size:.9rem;backdrop-filter:blur(5px);}#spabk:hover{background:#00f3ff;color:#000;}</style><button id=&quot;spabk&quot; onclick=&quot;_exitFs(function(){window.parent.postMessage('spa-back','*')}); exitLandscapeAndRelease();&quot;>← Hub</button>
+&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js&quot;&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;&lt;style&gt;#spabk{position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.8);color:#00f3ff;border:1px solid #00f3ff;padding:8px 18px;border-radius:20px;cursor:pointer;font-family:Segoe UI,sans-serif;font-size:.9rem;backdrop-filter:blur(5px);}#spabk:hover{background:#00f3ff;color:#000;}&lt;/style&gt;&lt;button id=&quot;spabk&quot; onclick=&quot;_exitFs(function(){window.parent.postMessage('spa-back','*')}); exitLandscapeAndRelease();&quot;&gt;← Hub&lt;/button&gt;
 
-<div id=&quot;game&quot;></div>
+&lt;div id=&quot;game&quot;&gt;&lt;/div&gt;
 
-<div id=&quot;ui&quot;>
-<div class=&quot;speed&quot; id=&quot;speed&quot;>0</div>
+&lt;div id=&quot;ui&quot;&gt;
+&lt;div class=&quot;speed&quot; id=&quot;speed&quot;&gt;0&lt;/div&gt;
 
-<div class=&quot;controls&quot;>
-<div style=&quot;display:flex&quot;>
-<div class=&quot;btn&quot; id=&quot;left&quot;>◀</div>
-<div class=&quot;btn&quot; id=&quot;right&quot;>▶</div>
-</div>
+&lt;div class=&quot;controls&quot;&gt;
+&lt;div style=&quot;display:flex&quot;&gt;
+&lt;div class=&quot;btn&quot; id=&quot;left&quot;&gt;◀&lt;/div&gt;
+&lt;div class=&quot;btn&quot; id=&quot;right&quot;&gt;▶&lt;/div&gt;
+&lt;/div&gt;
 
-<div style=&quot;display:flex&quot;>
-<div class=&quot;pedal&quot; id=&quot;brake&quot;>BRK</div>
-<div class=&quot;pedal&quot; id=&quot;gas&quot;>GAS</div>
-</div>
-</div>
-</div>
+&lt;div style=&quot;display:flex&quot;&gt;
+&lt;div class=&quot;pedal&quot; id=&quot;brake&quot;&gt;BRK&lt;/div&gt;
+&lt;div class=&quot;pedal&quot; id=&quot;gas&quot;&gt;GAS&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
 
-<script>
+&lt;script&gt;
  async function exitLandscapeAndRelease() {
  try {
  
- if (screen.orientation && screen.orientation.unlock) {
+ if (screen.orientation &amp;&amp; screen.orientation.unlock) {
  screen.orientation.unlock();
  console.log(&quot;Orientation unlocked. Phone will now follow the sensor.&quot;);
  }
@@ -6958,7 +7382,7 @@ async function handleMobileRotation() {
     }
 
     // 3. Lock Orientation to Landscape
-    if (screen.orientation && screen.orientation.lock) {
+    if (screen.orientation &amp;&amp; screen.orientation.lock) {
       // 'landscape' locks to both primary or secondary
       await screen.orientation.lock('landscape');
       console.log(&quot;Locked to landscape&quot;);
@@ -7008,7 +7432,7 @@ function createRoads(){
         polygonOffsetUnits: -4
     });
 
-    for(let i=-2000;i<=2000;i+=80){
+    for(let i=-2000;i&lt;=2000;i+=80){
         const r1 = new THREE.Mesh(
             new THREE.PlaneGeometry(4000,24),
             roadMat
@@ -7029,8 +7453,8 @@ function createRoads(){
 
 
 function createBuildings(){
-for(let x=-14;x<=14;x++){
-for(let z=-14;z<=14;z++){
+for(let x=-14;x&lt;=14;x++){
+for(let z=-14;z&lt;=14;z++){
 if(Math.abs(x)%2===0||Math.abs(z)%2===0) continue
 let h=25+Math.random()*60
 let b=new THREE.Mesh(
@@ -7045,7 +7469,7 @@ buildings.push(new THREE.Box3().setFromObject(b))
 }
 
 function createTrafficLights(){
-for(let i=-3;i<=3;i++){
+for(let i=-3;i&lt;=3;i++){
 let pole=new THREE.Mesh(
 new THREE.CylinderGeometry(1,1,22),
 new THREE.MeshStandardMaterial({color:0x333})
@@ -7056,10 +7480,10 @@ scene.add(pole)
 lights.push({state:2,timer:0}) // start green
 }
 
-setInterval(()=>{
-lights.forEach(l=>{
+setInterval(()=&gt;{
+lights.forEach(l=&gt;{
 l.timer++
-if(l.timer>300){
+if(l.timer&gt;300){
 l.state=(l.state+1)%3 // 0 red 1 yellow 2 green
 l.timer=0
 }
@@ -7070,7 +7494,7 @@ l.timer=0
 function createTrafficCars(){
     const types = [&quot;sedan&quot;,&quot;suv&quot;,&quot;truck&quot;];
 
-    for(let i=0;i<8;i++){
+    for(let i=0;i&lt;8;i++){
         const type = types[Math.floor(Math.random()*types.length)];
         const color = new THREE.Color().setHSL(Math.random(),0.6,0.5);
 
@@ -7152,7 +7576,7 @@ function createVehicle(type, color) {
     const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.45, 16);
     wheelGeo.rotateZ(Math.PI / 2);
 
-    [[1.3,1.8],[-1.3,1.8],[1.3,-1.8],[-1.3,-1.8]].forEach(p=>{
+    [[1.3,1.8],[-1.3,1.8],[1.3,-1.8],[-1.3,-1.8]].forEach(p=&gt;{
         const w = new THREE.Mesh(
             wheelGeo,
             new THREE.MeshStandardMaterial({color:0x111})
@@ -7164,7 +7588,7 @@ function createVehicle(type, color) {
 
     // BRAKE LIGHTS
     vehicle.userData.brakes = [];
-    [-0.8,0.8].forEach(x=>{
+    [-0.8,0.8].forEach(x=&gt;{
         const b = new THREE.Mesh(
             new THREE.BoxGeometry(0.4,0.2,0.1),
             new THREE.MeshBasicMaterial({color:0x330000})
@@ -7187,8 +7611,11 @@ function createCar(){
 
 
 
-function animate(){
-requestAnimationFrame(animate)
+let _lastFrameTime = 0;
+function animate(ts){
+requestAnimationFrame(animate);
+if (ts - _lastFrameTime &lt; 15.5) return; // 60fps lock (~16.67ms)
+_lastFrameTime = ts;
 
 // 🚗 PLAYER PHYSICS (FIXED)
 let accel=0
@@ -7212,8 +7639,8 @@ new THREE.Vector3(nx+1.2,2,nz+2.5)
 )
 
 let hit=false
-buildings.forEach(b=>{if(carBox.intersectsBox(b)) hit=true})
-traffic.forEach(t=>{
+buildings.forEach(b=&gt;{if(carBox.intersectsBox(b)) hit=true})
+traffic.forEach(t=&gt;{
 let tb=new THREE.Box3().setFromObject(t)
 if(carBox.intersectsBox(tb)) hit=true
 })
@@ -7228,18 +7655,18 @@ car.position.set(nx,0.6,nz)
 car.rotation.y=dir
 
 // 🚦 TRAFFIC AI
-traffic.forEach(t=>{
+traffic.forEach(t=&gt;{
     let stop=false;
-    lights.forEach(l=>{
-        if(l.state===0 &amp;&amp; Math.abs(t.position.z)<15) stop=true;
+    lights.forEach(l=&gt;{
+        if(l.state===0 &amp;&amp; Math.abs(t.position.z)&lt;15) stop=true;
     });
 
-    t.userData.brakes.forEach(b=>{
+    t.userData.brakes.forEach(b=&gt;{
         b.material.color.set(stop ? 0xff0000 : 0x330000);
     });
 
     if(!stop) t.position.x += t.userData.speed;
-    if(t.position.x>650) t.position.x=-650;
+    if(t.position.x&gt;650) t.position.x=-650;
 });
 
 // 📸 CAMERA
@@ -7250,7 +7677,7 @@ car.position.z-Math.cos(dir)*12
 )
 camera.position.lerp(camTarget,0.1)
 
-if(crashShake>0){
+if(crashShake&gt;0){
 camera.position.x+=(Math.random()-0.5)*0.6
 camera.position.y+=(Math.random()-0.5)*0.4
 crashShake--
@@ -7263,38 +7690,38 @@ renderer.render(scene,camera)
 }
 
 function setupControls(){
-const bind=(id,key)=>{
+const bind=(id,key)=&gt;{
 let e=document.getElementById(id)
-e.ontouchstart=e.onmousedown=ev=>{
+e.ontouchstart=e.onmousedown=ev=&gt;{
 ev.preventDefault();keys[key]=1}
-e.ontouchend=e.onmouseup=()=>keys[key]=0
+e.ontouchend=e.onmouseup=()=&gt;keys[key]=0
 }
 bind(&quot;gas&quot;,&quot;up&quot;)
 bind(&quot;brake&quot;,&quot;down&quot;)
 bind(&quot;left&quot;,&quot;left&quot;)
 bind(&quot;right&quot;,&quot;right&quot;)
 
-addEventListener(&quot;keydown&quot;,e=>{
+addEventListener(&quot;keydown&quot;,e=&gt;{
 if(e.key===&quot;w&quot;)keys.up=1
 if(e.key===&quot;s&quot;)keys.down=1
 if(e.key===&quot;a&quot;)keys.left=1
 if(e.key===&quot;d&quot;)keys.right=1
 })
-addEventListener(&quot;keyup&quot;,()=>keys={up:0,down:0,left:0,right:0})
+addEventListener(&quot;keyup&quot;,()=&gt;keys={up:0,down:0,left:0,right:0})
 }
 
-addEventListener(&quot;resize&quot;,()=>{
+addEventListener(&quot;resize&quot;,()=&gt;{
 camera.aspect=innerWidth/innerHeight
 camera.updateProjectionMatrix()
 renderer.setSize(innerWidth,innerHeight)
 })
-function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenElement){try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}var done=false;function go(){if(done)return;done=true;cb();}setTimeout(go,400);document.addEventListener('fullscreenchange',go,{once:true});document.addEventListener('webkitfullscreenchange',go,{once:true});try{document.exitFullscreen();}catch(e){try{document.webkitExitFullscreen();}catch(e2){}}}else{cb();}}
-</script>
-</body>
-</html>
+function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenElement){try{if(screen.orientation&amp;&amp;screen.orientation.unlock)screen.orientation.unlock();}catch(e){}var done=false;function go(){if(done)return;done=true;cb();}setTimeout(go,400);document.addEventListener('fullscreenchange',go,{once:true});document.addEventListener('webkitfullscreenchange',go,{once:true});try{document.exitFullscreen();}catch(e){try{document.webkitExitFullscreen();}catch(e2){}}}else{cb();}}
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
 
 
-" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock" allowfullscreen></iframe>
+&quot; sandbox=&quot;allow-scripts allow-same-origin allow-forms allow-pointer-lock&quot; allowfullscreen&gt;</iframe>
         </div>
     </div>
     <div id="section-game-snake" class="spa-section hidden-right game-frame">
@@ -7316,8 +7743,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
                 db.ref('users/' + checkId).once('value', snap => {
                     if (!snap.exists()) {
                         window.parent.postMessage({type:'notify',msg:'⛔ Access denied! Please re-login.',nt:'error'},'*');
-                        localStorage.removeItem('isLoggedIn');
-                        localStorage.removeItem('playerName');
+                        localStorage.clear();
                         window.parent.postMessage('spa-back','*');
                     }
                 });
@@ -8214,8 +8640,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
                 db.ref('users/' + checkId).once('value', snap => {
                     if (!snap.exists()) {
                         window.parent.postMessage({type:'notify',msg:'⛔ Access denied! Please re-login.',nt:'error'},'*');
-                        localStorage.removeItem('isLoggedIn');
-                        localStorage.removeItem('playerName');
+                        localStorage.clear();
                         window.parent.postMessage('spa-back','*');
                     }
                 });
@@ -8613,8 +9038,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
                 db.ref('users/' + checkId).once('value', snap => {
                     if (!snap.exists()) {
                         window.parent.postMessage({type:'notify',msg:'⛔ Access denied! Please re-login.',nt:'error'},'*');
-                        localStorage.removeItem('isLoggedIn');
-                        localStorage.removeItem('playerName');
+                        localStorage.clear();
                         window.parent.postMessage('spa-back','*');
                     }
                 });
@@ -8997,11 +9421,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
 
     <script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js&quot;></script>
     <script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js&quot;></script>
-
-    <script>
-        // --- CONFIG ---
-        const firebaseConfig = {
-            apiKey: &quot;AIzaSyD8KMiqZTr39IPw8LENyahLILLNbkFfQXM&quot;,
+    <script src=&quot;https://cdn.socket.io/4.7.2/socket.io.min.js&quot;></script>
             authDomain: &quot;bittuhere-90415.firebaseapp.com&quot;,
             databaseURL: &quot;https://bittuhere-90415-default-rtdb.asia-southeast1.firebasedatabase.app&quot;,
             projectId: &quot;bittuhere-90415&quot;,
@@ -9013,15 +9433,9 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const socket = io('https://arcade-hub-email.onrender.com');
+        const myName = localStorage.getItem('playerName') || "Player";
 
-        // Game Vars
-        let mySymbol = '';
-        let roomId = '';
-        let isMyTurn = false;
-        let gameActive = true;
-        const myName = localStorage.getItem('playerName') || &quot;Player&quot;;
-
-        // UI
         const lobby = document.getElementById('lobby');
         const gameArea = document.getElementById('game-area');
         const statusMsg = document.getElementById('statusMsg');
@@ -9032,259 +9446,102 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
         const inviteList = document.getElementById('invite-list');
         const chatMsgs = document.getElementById('gameChatMsgs');
 
-        // --- SIDEBAR ---
-        function toggleSidebar() {
-            sidebar.classList.toggle('active');
-            if (sidebar.classList.contains('active')) loadFriendsForInvite();
-        }
-
+        // SIDEBAR (Firebase — social feature)
+        function toggleSidebar() { sidebar.classList.toggle('active'); if (sidebar.classList.contains('active')) loadFriendsForInvite(); }
         function loadFriendsForInvite() {
             if (!myName) return;
             db.ref('friends/' + myName).once('value', snapshot => {
-                inviteList.innerHTML = &quot;&quot;;
+                inviteList.innerHTML = "";
                 if (snapshot.exists()) {
                     Object.keys(snapshot.val()).forEach(friendName => {
-                        const div = document.createElement('div');
-                        div.className = 'invite-item';
-                        div.innerHTML = `<span>${friendName}</span><button class=&quot;btn-send-invite&quot; onclick=&quot;sendInvite('${friendName}')&quot;>SEND CODE</button>`;
+                        const div = document.createElement('div'); div.className = 'invite-item';
+                        div.innerHTML = `<span>${friendName}</span><button class="btn-send-invite" onclick="sendInvite('${friendName}')">SEND CODE</button>`;
                         inviteList.appendChild(div);
                     });
-                } else inviteList.innerHTML = &quot;<p>No friends found.</p>&quot;;
+                } else inviteList.innerHTML = "<p>No friends found.</p>";
             });
         }
-
         function sendInvite(friendName) {
             if (!roomId) return window.parent.postMessage({type:'notify',msg:'Create a game first!',nt:'error'},'*');
-            // Write to Firebase invites/<recipientName> — NOT postMessage (that only goes to self)
-            db.ref('invites/' + friendName.toLowerCase()).push({
-                from: myName, game: 'ttt', code: roomId, time: Date.now()
-            });
+            db.ref('invites/' + friendName.toLowerCase()).push({ from: myName, game: 'ttt', code: roomId, time: Date.now() });
             var chatId = [myName, friendName].sort().join('_');
-            db.ref('chats/' + chatId).push({
-                sender: myName, text: '🎮 Join my Tic-Tac-Toe! Code: ' + roomId, timestamp: Date.now()
-            });
-            window.parent.postMessage({type:'notify',msg:'✓ Invite sent to '+friendName+'!',nt:'invite'},'*');
+            db.ref('chats/' + chatId).push({ sender: myName, text: 'Join my Tic-Tac-Toe! Code: ' + roomId, timestamp: Date.now() });
+            window.parent.postMessage({type:'notify',msg:'Invite sent to '+friendName+'!',nt:'invite'},'*');
             toggleSidebar();
         }
 
-        // --- GAME LOGIC ---
-        function createRoom() {
-            roomId = Math.floor(1000 + Math.random() * 9000).toString();
-            mySymbol = 'X';
-
-            db.ref('games/' + roomId).set({
-                board: [&quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;],
-                turn: 'X', status: 'waiting', rematch: null, lastActivity: Date.now(),
-                players: { X: true }
-            });
-
-            // Auto-delete if inactive for 10 min
-            if (window._tttActivityInterval) clearInterval(window._tttActivityInterval);
-            window._tttActivityInterval = setInterval(function() {
-                if (!roomId) { clearInterval(window._tttActivityInterval); return; }
-                db.ref('games/' + roomId + '/lastActivity').once('value', function(snap) {
-                    if (snap.exists() && Date.now() - snap.val() > 600000) {
-                        db.ref('games/' + roomId).remove();
-                        clearInterval(window._tttActivityInterval);
-                        window.parent.postMessage({type:'notify',msg:'Room deleted: 10min inactivity.',nt:'error'},'*');
-                    }
-                });
-            }, 60000);
-
-            db.ref('games/' + roomId + '/players/X').onDisconnect().remove();
-
-            enterGameUI();
-            listenToGame();
+        // SOCKET EVENTS
+        socket.on('ttt:created', ({ roomId: rid }) => {
+            roomId = rid; mySymbol = 'X';
+            enterGameUI(); statusMsg.innerText = "Waiting for opponent...";
             setTimeout(() => { if (!sidebar.classList.contains('active')) toggleSidebar(); }, 600);
-        }
+        });
+        socket.on('ttt:state', ({ board, turn, status, winner }) => {
+            updateBoardUI(board); restartBtn.style.display = 'none';
+            cells.forEach(c => c.classList.remove('win-highlight'));
+            if (status === 'playing') {
+                gameActive = true;
+                if (turn === mySymbol) { statusMsg.innerText = "YOUR TURN (" + mySymbol + ")"; statusMsg.style.color = "#00f3ff"; isMyTurn = true; }
+                else { statusMsg.innerText = "Opponent's Turn"; statusMsg.style.color = "#aaa"; isMyTurn = false; }
+            } else if (status === 'finished') {
+                restartBtn.style.display = 'block'; isMyTurn = false; gameActive = false;
+                if (winner === mySymbol) { statusMsg.innerText = "YOU WON!"; statusMsg.style.color = "#00ff00"; }
+                else { statusMsg.innerText = "YOU LOST"; statusMsg.style.color = "#ff0000"; }
+                if (winner) { const wl = checkWin(board, winner); if (wl) wl.forEach(i => cells[i].classList.add('win-highlight')); }
+                restartBtn.innerText = "Request Rematch"; restartBtn.disabled = false;
+            } else if (status === 'draw') {
+                restartBtn.style.display = 'block'; isMyTurn = false; gameActive = false;
+                statusMsg.innerText = "DRAW!"; statusMsg.style.color = "yellow";
+                restartBtn.innerText = "Request Rematch"; restartBtn.disabled = false;
+            }
+        });
+        socket.on('ttt:chat', ({ n, msg }) => {
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + (n === myName ? 'msg-me' : 'msg-opp');
+            div.innerText = msg; chatMsgs.appendChild(div); chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        });
+        socket.on('ttt:error', msg => window.parent.postMessage({type:'notify',msg,nt:'error'},'*'));
+        socket.on('ttt:opponent-left', () => { statusMsg.innerText = "Opponent Disconnected!"; statusMsg.style.color = "red"; gameActive = false; });
 
-        // Listen for auto-join from parent (invite accept)
+        // GAME LOGIC
+        function createRoom() { socket.emit('ttt:create', { playerName: myName }); }
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'auto-join' && e.data.code) {
-                document.getElementById('roomInput').value = e.data.code;
-                joinRoom();
+                document.getElementById('roomInput').value = e.data.code; joinRoom();
             }
         });
         function joinRoom() {
-            roomId = document.getElementById('roomInput').value.trim();
-            if (roomId.length !== 4) return window.parent.postMessage({type:'notify',msg:'Enter a valid 4-digit code!',nt:'error'},'*');
-
-            db.ref('games/' + roomId).once('value').then(snapshot => {
-                if (snapshot.exists()) {
-                    mySymbol = 'O';
-                    // Update Game Status
-                    db.ref('games/' + roomId).update({ status: 'playing' });
-                    // Mark Player O as present
-                    db.ref('games/' + roomId + '/players/O').set(true);
-                    db.ref('games/' + roomId + '/players/O').onDisconnect().remove();
-
-                    enterGameUI();
-                    listenToGame();
-                } else window.parent.postMessage({type:'notify',msg:'Room not found!',nt:'error'},'*');
-            });
+            const code = document.getElementById('roomInput').value.trim();
+            if (code.length !== 4) return window.parent.postMessage({type:'notify',msg:'Enter a valid 4-digit code!',nt:'error'},'*');
+            mySymbol = 'O'; roomId = code;
+            socket.emit('ttt:join', { code, playerName: myName });
+            enterGameUI(); statusMsg.innerText = "Connecting...";
         }
-
         function enterGameUI() {
-            lobby.style.display = 'none';
-            gameArea.style.display = 'flex';
+            lobby.style.display = 'none'; gameArea.style.display = 'flex';
             displayCode.innerText = roomId;
-            statusMsg.innerText = mySymbol === 'X' ? &quot;Waiting...&quot; : &quot;Connected!&quot;;
-            chatMsgs.innerHTML = '<div style=&quot;text-align:center; color:#555; font-size:0.8rem;&quot;>Game Chat Started</div>';
+            chatMsgs.innerHTML = '<div style="text-align:center;color:#555;font-size:.8rem;">Game Chat</div>';
         }
-
-        function listenToGame() {
-            // Game State Listener
-            db.ref('games/' + roomId).on('value', (snapshot) => {
-                const game = snapshot.val();
-                if (!game) {
-                    // Room deleted
-                    window.parent.postMessage({type:'notify',msg:'Room was closed by host.',nt:'error'},'*');
-                    return;
-                }
-
-                // Check Presence (Auto Delete Logic)
-                const players = game.players || {};
-                if (game.status === 'playing' &amp;&amp; (!players.X || !players.O)) {
-                    // Someone left during game
-                    statusMsg.innerText = &quot;Opponent Left!&quot;;
-                    statusMsg.style.color = &quot;red&quot;;
-                    gameActive = false;
-                    return;
-                }
-
-                updateBoardUI(game.board);
-                restartBtn.style.display = 'none';
-
-                if (game.status === 'playing') {
-                    gameActive = true;
-                    cells.forEach(c => c.classList.remove('win-highlight'));
-                    if (game.turn === mySymbol) {
-                        statusMsg.innerText = &quot;YOUR TURN (&quot; + mySymbol + &quot;)&quot;;
-                        statusMsg.style.color = &quot;#00f3ff&quot;;
-                        isMyTurn = true;
-                    } else {
-                        statusMsg.innerText = &quot;Opponent's Turn&quot;;
-                        statusMsg.style.color = &quot;#aaa&quot;;
-                        isMyTurn = false;
-                    }
-                } else if (game.status === 'win') {
-                    restartBtn.style.display = 'block';
-                    if (game.winner) {
-                        const winLine = checkWin(game.board, game.winner);
-                        if (winLine) winLine.forEach(i => cells[i].classList.add('win-highlight'));
-                    }
-                    if (game.winner === mySymbol) {
-                        statusMsg.innerText = &quot;YOU WON! 🎉&quot;; statusMsg.style.color = &quot;#00ff00&quot;;
-                    } else {
-                        statusMsg.innerText = &quot;YOU LOST 💀&quot;; statusMsg.style.color = &quot;#ff0000&quot;;
-                    }
-                    isMyTurn = false;
-                    checkRematch(game.rematch);
-                } else if (game.status === 'draw') {
-                    restartBtn.style.display = 'block';
-                    statusMsg.innerText = &quot;DRAW GAME&quot;; statusMsg.style.color = &quot;yellow&quot;;
-                    isMyTurn = false;
-                    checkRematch(game.rematch);
-                }
-            });
-
-            // Chat Listener
-            db.ref('games/' + roomId + '/chat').on('child_added', (snap) => {
-                const msg = snap.val();
-                const div = document.createElement('div');
-                div.className = 'chat-msg ' + (msg.sender === myName ? 'msg-me' : 'msg-opp');
-                div.innerText = msg.text;
-                chatMsgs.appendChild(div);
-                chatMsgs.scrollTop = chatMsgs.scrollHeight;
-            });
-        }
-
-        // --- LEAVE &amp; CLEANUP ---
-        function tttBackBtn() {
-            if (gameActive &amp;&amp; roomId &amp;&amp; mySymbol) {
-                // Match is running — leave properly first
-                leaveGame(true);
-            } else {
-                window.parent.postMessage('spa-back','*');
-            }
-        }
-        function leaveGame(goBack) {
-            if (window._tttActivityInterval) { clearInterval(window._tttActivityInterval); window._tttActivityInterval = null; }
-            if (roomId) {
-                db.ref('games/' + roomId + '/players/' + mySymbol).remove().then(() => {
-                    db.ref('games/' + roomId + '/players').once('value').then(snap => {
-                        if (!snap.exists()) db.ref('games/' + roomId).remove();
-                    });
-                });
-            }
-            if (goBack) { window.parent.postMessage('spa-back','*'); }
-            else { location.reload(); }
-        }
-
-        // --- CHAT LOGIC ---
+        function tttBackBtn() { socket.disconnect(); window.parent.postMessage('spa-back','*'); }
+        function leaveGame(goBack) { socket.disconnect(); if (goBack) window.parent.postMessage('spa-back','*'); else location.reload(); }
         function sendGameMessage() {
-            const input = document.getElementById('gameChatInput');
-            const txt = input.value.trim();
+            const input = document.getElementById('gameChatInput'), txt = input.value.trim();
             if (!txt || !roomId) return;
-
-            db.ref('games/' + roomId + '/chat').push({
-                sender: myName, text: txt
-            });
-            input.value = &quot;&quot;;
+            socket.emit('ttt:chat', { msg: txt }); input.value = "";
         }
         function handleChatKey(e) { if (e.key === 'Enter') sendGameMessage(); }
-
-        // --- CORE GAME ---
-        function checkRematch(req) {
-            if (req) {
-                if (req !== mySymbol) {
-                    statusMsg.innerText = &quot;Opponent wants Rematch!&quot;;
-                    restartBtn.innerText = &quot;Accept Rematch&quot;;
-                } else {
-                    statusMsg.innerText = &quot;Waiting for opponent...&quot;;
-                    restartBtn.innerText = &quot;Request Sent...&quot;;
-                    restartBtn.disabled = true;
-                }
-            } else {
-                restartBtn.innerText = &quot;Request Rematch&quot;; restartBtn.disabled = false;
-            }
-        }
-        function requestRematch() {
-            db.ref('games/' + roomId).once('value').then(snap => {
-                const g = snap.val();
-                if (g.rematch &amp;&amp; g.rematch !== mySymbol) {
-                    db.ref('games/' + roomId).update({
-                        board: [&quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;], turn: 'X', status: 'playing', winner: null, rematch: null
-                    });
-                } else db.ref('games/' + roomId).update({ rematch: mySymbol });
-            });
-        }
-
-        function updateBoardUI(b) {
-            cells.forEach((c, i) => {
-                c.innerText = b[i]; c.className = 'cell ' + b[i];
-                if (c.classList.contains('win-highlight')) { }
-            });
-        }
+        function requestRematch() { socket.emit('ttt:rematch'); restartBtn.innerText = "Sent..."; restartBtn.disabled = true; }
+        function updateBoardUI(b) { cells.forEach((c,i) => { c.innerText = b[i]; c.className = 'cell ' + b[i]; }); }
         function makeMove(i) {
             if (!isMyTurn || !gameActive) return;
-            if (document.getElementById('c' + i).innerText !== &quot;&quot;) return;
-
-            db.ref('games/' + roomId).once('value').then(snap => {
-                const g = snap.val();
-                let nb = g.board; nb[i] = mySymbol;
-                let next = mySymbol === 'X' ? 'O' : 'X';
-                let stat = 'playing'; let win = null;
-
-                if (checkWin(nb, mySymbol)) { stat = 'win'; win = mySymbol; }
-                else if (!nb.includes(&quot;&quot;)) stat = 'draw';
-
-                db.ref('games/' + roomId).update({ board: nb, turn: next, status: stat, winner: win, lastActivity: Date.now() });
-            });
+            if (document.getElementById('c'+i).innerText !== "") return;
+            socket.emit('ttt:move', { index: i });
         }
         function checkWin(b, p) {
-            const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
-            for (let w of wins) if (b[w[0]] === p &amp;&amp; b[w[1]] === p &amp;&amp; b[w[2]] === p) return w;
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            for (let w of wins) if (b[w[0]]===p && b[w[1]]===p && b[w[2]]===p) return w;
+            return null;
+        }
             return null;
         }
     </script>
@@ -9298,31 +9555,31 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
     <div id="section-game-multicar" class="spa-section hidden-right game-frame">
         <div class="game-section-wrapper">
             <iframe id="iframe-multicar" allow="fullscreen; screen-orientation"
-                style="width:100%;height:100%;border:none;" srcdoc="id=&quot;iframe-multicar&quot; style=&quot;width:100%;height:100%;border:none;&quot; srcdoc=&quot;id=&quot;iframe-multicar&quot; style=&quot;width:100%;height:100%;border:none;&quot; srcdoc=&quot;id=&quot;iframe-multicar&quot; style=&quot;width:100%;height:100%;border:none;&quot; srcdoc=&quot;<!DOCTYPE html>
-<html lang=&quot;en&quot;>
-<head>
-    <script>
+                style="width:100%;height:100%;border:none;" srcdoc="&quot;&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;script&gt;
        // SECURITY CHECK &amp; FIREBASE VERIFICATION
         const storedName = localStorage.getItem('playerName');
         const isLoggedIn  = localStorage.getItem('isLoggedIn');
         if (!storedName || isLoggedIn !== 'true') {
-            document.write('<div style=&quot;display:flex;align-items:center;justify-content:center;height:100vh;background:#0d0b22;color:#ff3366;font-family:Teko,sans-serif;font-size:2rem;text-align:center;&quot;>🔒 NOT LOGGED IN<br><span style=&quot;font-size:1rem;color:#888;&quot;>Return to Arcade Hub</span></div>');
+            document.write('&lt;div style=&quot;display:flex;align-items:center;justify-content:center;height:100vh;background:#0d0b22;color:#ff3366;font-family:Teko,sans-serif;font-size:2rem;text-align:center;&quot;&gt;🔒 NOT LOGGED IN&lt;br&gt;&lt;span style=&quot;font-size:1rem;color:#888;&quot;&gt;Return to Arcade Hub&lt;/span&gt;&lt;/div&gt;');
             throw new Error('Not authenticated');
         }
         // Periodic check
-        setInterval(() => {
+        setInterval(() =&gt; {
             if (localStorage.getItem('isLoggedIn') !== 'true') {
                 window.parent.postMessage('spa-back','*');
             }
         }, 5000);
-    </script>
-    <meta charset=&quot;UTF-8&quot;>
-    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot;>
-    <title>City Drift Online</title>
-    <script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js&quot;></script>
-    <script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js&quot;></script>
-    <script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js&quot;></script>
-    <style>
+    &lt;/script&gt;
+    &lt;meta charset=&quot;UTF-8&quot;&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot;&gt;
+    &lt;title&gt;City Drift Online&lt;/title&gt;
+    &lt;script src=&quot;https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;https://cdn.socket.io/4.7.2/socket.io.min.js&quot;&gt;&lt;/script&gt;
+    &lt;style&gt;
 
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:none;}
         body{background:#1a1a2e;overflow:hidden;font-family:'Segoe UI',sans-serif;user-select:none;}
@@ -9384,73 +9641,73 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
         #chat-input-row{display:flex;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;}
         #chat-input{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;padding:7px 10px;font-size:.82rem;outline:none;}
         #chat-send{background:#00f3ff;color:#000;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:bold;}
-    </style>
+    &lt;/style&gt;
 
-</head>
-<body>
+&lt;/head&gt;
+&lt;body&gt;
 
-<!-- LOADING -->
-<div id=&quot;loading-screen&quot;>
-    <div class=&quot;load-ring&quot;></div>
-    <div class=&quot;load-text&quot;>LOADING CITY...</div>
-</div>
+&lt;!-- LOADING --&gt;
+&lt;div id=&quot;loading-screen&quot;&gt;
+    &lt;div class=&quot;load-ring&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;load-text&quot;&gt;LOADING CITY...&lt;/div&gt;
+&lt;/div&gt;
 
-<!-- LOBBY -->
-<div id=&quot;lobby&quot; style=&quot;display:none;&quot;>
-    <div class=&quot;lobby-card&quot;>
-        <div class=&quot;lobby-title&quot;>🏎️ CITY DRIFT</div>
-        <div class=&quot;lobby-sub&quot;>MULTIPLAYER RACING ONLINE</div>
-        <button class=&quot;lobby-btn btn-create&quot; onclick=&quot;createRoom(); handleMobileRotation();&quot;>🚀 CREATE ROOM</button>
-        <input class=&quot;lobby-input&quot; id=&quot;roomInput&quot; placeholder=&quot;ROOM CODE&quot; maxlength=&quot;4&quot;>
-        <button class=&quot;lobby-btn btn-join&quot; onclick=&quot;joinRoom(); handleMobileRotation()&quot;>🔑 JOIN ROOM</button>
-        <button class=&quot;lobby-btn btn-back&quot; onclick=&quot;window.parent.postMessage('spa-back','*')&quot;>← BACK TO HUB</button>
-        <div class=&quot;lobby-status&quot; id=&quot;lobby-status&quot;></div>
-    </div>
-</div>
+&lt;!-- LOBBY --&gt;
+&lt;div id=&quot;lobby&quot; style=&quot;display:none;&quot;&gt;
+    &lt;div class=&quot;lobby-card&quot;&gt;
+        &lt;div class=&quot;lobby-title&quot;&gt;🏎️ CITY DRIFT&lt;/div&gt;
+        &lt;div class=&quot;lobby-sub&quot;&gt;MULTIPLAYER RACING ONLINE&lt;/div&gt;
+        &lt;button class=&quot;lobby-btn btn-create&quot; onclick=&quot;createRoom(); handleMobileRotation();&quot;&gt;🚀 CREATE ROOM&lt;/button&gt;
+        &lt;input class=&quot;lobby-input&quot; id=&quot;roomInput&quot; placeholder=&quot;ROOM CODE&quot; maxlength=&quot;4&quot;&gt;
+        &lt;button class=&quot;lobby-btn btn-join&quot; onclick=&quot;joinRoom(); handleMobileRotation()&quot;&gt;🔑 JOIN ROOM&lt;/button&gt;
+        &lt;button class=&quot;lobby-btn btn-back&quot; onclick=&quot;window.parent.postMessage('spa-back','*')&quot;&gt;← BACK TO HUB&lt;/button&gt;
+        &lt;div class=&quot;lobby-status&quot; id=&quot;lobby-status&quot;&gt;&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
 
-<!-- GAME CONTAINER -->
-<div id=&quot;game-container&quot;></div>
+&lt;!-- GAME CONTAINER --&gt;
+&lt;div id=&quot;game-container&quot;&gt;&lt;/div&gt;
 
-<!-- HUD -->
-<div id=&quot;hud&quot; style=&quot;display:none;&quot;>
-    <button id=&quot;back-btn&quot; onclick=&quot;window.parent.postMessage('spa-back','*'); exitLandscapeAndRelease();&quot;>← Hub</button>
-    <div id=&quot;ping-wrap&quot;>
-        <span class=&quot;ping-badge ping-good&quot; id=&quot;car-ping-badge&quot;><span class=&quot;ping-dot&quot;></span><span id=&quot;car-ping-ms&quot;>--</span>ms</span>
-    </div>
-    <div id=&quot;room-info&quot;>
-        <div id=&quot;room-code-display&quot;>----</div>
-        <div id=&quot;player-count&quot;>Waiting...</div>
-    </div>
-    <div id=&quot;speedo&quot;>
-        <div id=&quot;speed-val&quot;>0</div>
-        <div id=&quot;speed-unit&quot;>KM/H</div>
-        <div id=&quot;gear-display&quot;>N</div>
-    </div>
-    <div id=&quot;minimap-wrap&quot;>
-        <canvas id=&quot;minimap&quot; width=&quot;130&quot; height=&quot;130&quot;></canvas>
-    </div>
-</div>
-    <div id=&quot;chat-toggle&quot; onclick=&quot;toggleChat()&quot;>💬 <div id=&quot;chat-unread&quot;></div></div>
-    <div id=&quot;chat-panel&quot;>
-        <div id=&quot;chat-header&quot;><span>💬 CHAT</span><span onclick=&quot;toggleChat()&quot; style=&quot;cursor:pointer;color:rgba(255,255,255,.4);&quot;>✕</span></div>
-        <div id=&quot;chat-messages&quot;></div>
-        <div id=&quot;chat-input-row&quot;><input id=&quot;chat-input&quot; placeholder=&quot;Message...&quot; maxlength=&quot;80&quot;><button id=&quot;chat-send&quot; onclick=&quot;sendChat()&quot;>➤</button></div>
-    </div>
+&lt;!-- HUD --&gt;
+&lt;div id=&quot;hud&quot; style=&quot;display:none;&quot;&gt;
+    &lt;button id=&quot;back-btn&quot; onclick=&quot;window.parent.postMessage('spa-back','*'); exitLandscapeAndRelease();&quot;&gt;← Hub&lt;/button&gt;
+    &lt;div id=&quot;ping-wrap&quot;&gt;
+        &lt;span class=&quot;ping-badge ping-good&quot; id=&quot;car-ping-badge&quot;&gt;&lt;span class=&quot;ping-dot&quot;&gt;&lt;/span&gt;&lt;span id=&quot;car-ping-ms&quot;&gt;--&lt;/span&gt;ms&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div id=&quot;room-info&quot;&gt;
+        &lt;div id=&quot;room-code-display&quot;&gt;----&lt;/div&gt;
+        &lt;div id=&quot;player-count&quot;&gt;Waiting...&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div id=&quot;speedo&quot;&gt;
+        &lt;div id=&quot;speed-val&quot;&gt;0&lt;/div&gt;
+        &lt;div id=&quot;speed-unit&quot;&gt;KM/H&lt;/div&gt;
+        &lt;div id=&quot;gear-display&quot;&gt;N&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div id=&quot;minimap-wrap&quot;&gt;
+        &lt;canvas id=&quot;minimap&quot; width=&quot;130&quot; height=&quot;130&quot;&gt;&lt;/canvas&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+    &lt;div id=&quot;chat-toggle&quot; onclick=&quot;toggleChat()&quot;&gt;💬 &lt;div id=&quot;chat-unread&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div id=&quot;chat-panel&quot;&gt;
+        &lt;div id=&quot;chat-header&quot;&gt;&lt;span&gt;💬 CHAT&lt;/span&gt;&lt;span onclick=&quot;toggleChat()&quot; style=&quot;cursor:pointer;color:rgba(255,255,255,.4);&quot;&gt;✕&lt;/span&gt;&lt;/div&gt;
+        &lt;div id=&quot;chat-messages&quot;&gt;&lt;/div&gt;
+        &lt;div id=&quot;chat-input-row&quot;&gt;&lt;input id=&quot;chat-input&quot; placeholder=&quot;Message...&quot; maxlength=&quot;80&quot;&gt;&lt;button id=&quot;chat-send&quot; onclick=&quot;sendChat()&quot;&gt;➤&lt;/button&gt;&lt;/div&gt;
+    &lt;/div&gt;
 
-<!-- TOUCH CONTROLS -->
-<div id=&quot;touch-controls&quot; style=&quot;display:none;&quot;>
-    <div class=&quot;touch-side&quot;>
-        <div class=&quot;touch-btn&quot; id=&quot;t-left&quot;>◀</div>
-        <div class=&quot;touch-btn&quot; id=&quot;t-right&quot;>▶</div>
-    </div>
-    <div class=&quot;touch-side&quot;>
-        <div class=&quot;touch-btn touch-btn-brake&quot; id=&quot;t-brake&quot;>🔴</div>
-        <div class=&quot;touch-btn touch-btn-gas&quot; id=&quot;t-gas&quot;>🟢</div>
-    </div>
-</div>
+&lt;!-- TOUCH CONTROLS --&gt;
+&lt;div id=&quot;touch-controls&quot; style=&quot;display:none;&quot;&gt;
+    &lt;div class=&quot;touch-side&quot;&gt;
+        &lt;div class=&quot;touch-btn&quot; id=&quot;t-left&quot;&gt;◀&lt;/div&gt;
+        &lt;div class=&quot;touch-btn&quot; id=&quot;t-right&quot;&gt;▶&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;touch-side&quot;&gt;
+        &lt;div class=&quot;touch-btn touch-btn-brake&quot; id=&quot;t-brake&quot;&gt;🔴&lt;/div&gt;
+        &lt;div class=&quot;touch-btn touch-btn-gas&quot; id=&quot;t-gas&quot;&gt;🟢&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
 
 
-<script>
+&lt;script&gt;
  async function handleMobileRotation() {
   // 1. Check if it's a mobile device
   if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -9471,7 +9728,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
     }
 
     // 3. Lock Orientation to Landscape
-    if (screen.orientation && screen.orientation.lock) {
+    if (screen.orientation &amp;&amp; screen.orientation.lock) {
       // 'landscape' locks to both primary or secondary
       await screen.orientation.lock('landscape');
       console.log(&quot;Locked to landscape&quot;);
@@ -9486,7 +9743,7 @@ function _exitFs(cb){if(document.fullscreenElement||document.webkitFullscreenEle
  async function exitLandscapeAndRelease() {
   try {
 
-    if (screen.orientation && screen.orientation.unlock) {
+    if (screen.orientation &amp;&amp; screen.orientation.unlock) {
       screen.orientation.unlock();
       console.log(&quot;Orientation unlocked. Phone will now follow the sensor.&quot;);
     }
@@ -9520,6 +9777,7 @@ const firebaseConfig = {
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const socket = io('https://arcade-hub-email.onrender.com');
 const playerName = localStorage.getItem('playerName') || 'Driver';
 
 // ═════════
@@ -9533,7 +9791,7 @@ const MAP_H  = BLOCK*(GRID-1); // 280 units total
 const HALF   = MAP_H/2;     // 140
 
 // Road center positions (-140,-70,0,70,140)
-const ROADS  = Array.from({length:GRID},(_,i)=> -HALF + i*BLOCK);
+const ROADS  = Array.from({length:GRID},(_,i)=&gt; -HALF + i*BLOCK);
 
 // Physics constants
 const MAX_SPD   = 0.7;
@@ -9595,7 +9853,7 @@ function initThree() {
     // Hemisphere light for nice sky/ground gradient
     scene.add(new THREE.HemisphereLight(0x87CEEB, 0x4a7a2a, 0.5));
 
-    window.addEventListener('resize', ()=>{
+    window.addEventListener('resize', ()=&gt;{
         camera.aspect = innerWidth/innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(innerWidth, innerHeight);
@@ -9620,11 +9878,11 @@ function makeRoadTexture() {
     // draw road lines
     const roadPx = Math.round(size * ROAD_W / (GRID*BLOCK));
     const step = Math.round(size / (GRID-1));
-    ROADS.forEach((_, i) => {
+    ROADS.forEach((_, i) =&gt; {
         const pos = Math.round((i/(GRID-1)) * size);
         // Road stripes
         ctx.fillStyle = '#fff';
-        for (let d=0; d<size; d+=40) {
+        for (let d=0; d&lt;size; d+=40) {
             ctx.fillRect(pos - roadPx/2 + roadPx*0.45, d, 4, 20);
             ctx.fillRect(d, pos - roadPx/2 + roadPx*0.45, 20, 4);
         }
@@ -9640,7 +9898,7 @@ function makeRoadTexture() {
 
 function buildWorld() {
     const S=MAP_H+ROAD_W*2+60;
-    const bMats=[0xc0392b,0x2980b9,0x27ae60,0xd35400,0x8e44ad,0x2c3e50,0x7f8c8d,0x16a085].map(col=>new THREE.MeshLambertMaterial({color:col}));
+    const bMats=[0xc0392b,0x2980b9,0x27ae60,0xd35400,0x8e44ad,0x2c3e50,0x7f8c8d,0x16a085].map(col=&gt;new THREE.MeshLambertMaterial({color:col}));
     const hutMat=new THREE.MeshLambertMaterial({color:0xd4a76a});
     const roofMat=new THREE.MeshLambertMaterial({color:0x6B3A2A});
     const treeMat=new THREE.MeshLambertMaterial({color:0x228822});
@@ -9651,13 +9909,13 @@ function buildWorld() {
     const rMesh=new THREE.Mesh(new THREE.PlaneGeometry(S,S),new THREE.MeshLambertMaterial({map:roadTex,transparent:true,opacity:1,color:0x444444}));
     rMesh.rotation.x=-Math.PI/2;rMesh.position.y=0.01;rMesh.receiveShadow=true;scene.add(rMesh);
     let bIdx=0;
-    for(let ri=0;ri<GRID-1;ri++){
-        for(let ci=0;ci<GRID-1;ci++){
+    for(let ri=0;ri&lt;GRID-1;ri++){
+        for(let ci=0;ci&lt;GRID-1;ci++){
             const cx=(ROADS[ci]+ROADS[ci+1])/2,cz=(ROADS[ri]+ROADS[ri+1])/2;
             const maxW=BLOCK-ROAD_W-4,seed=ri*7+ci*13;
             if((ri+ci)%3===0){
                 const nH=2+Math.floor(Math.abs(Math.sin(seed)*2));
-                for(let h=0;h<nH;h++){
+                for(let h=0;h&lt;nH;h++){
                     const hw=5+Math.abs(Math.sin(h*7+seed)*4),hd=5+Math.abs(Math.cos(h*5+seed)*4),ht=3+Math.abs(Math.sin(h*11)*2);
                     const ox=Math.sin(h*5+ri)*(maxW*0.3),oz=Math.cos(h*7+ci)*(maxW*0.3);
                     const hut=new THREE.Mesh(new THREE.BoxGeometry(hw,ht,hd),hutMat);
@@ -9666,10 +9924,10 @@ function buildWorld() {
                     const rf=new THREE.Mesh(new THREE.ConeGeometry(Math.max(hw,hd)*0.7,ht*0.7,6),roofMat);
                     rf.position.set(cx+ox,ht+ht*0.35,cz+oz);rf.castShadow=true;scene.add(rf);
                 }
-                for(let t=0;t<2;t++) addTree(cx+Math.sin(t*3.1+seed)*maxW*0.35,cz+Math.cos(t*2.9+seed)*maxW*0.35,treeMat,trunkMat);
+                for(let t=0;t&lt;2;t++) addTree(cx+Math.sin(t*3.1+seed)*maxW*0.35,cz+Math.cos(t*2.9+seed)*maxW*0.35,treeMat,trunkMat);
             }else{
                 const nB=2+Math.floor(Math.abs(Math.sin(seed)*2));
-                for(let b=0;b<nB;b++){
+                for(let b=0;b&lt;nB;b++){
                     const bw=7+Math.abs(Math.sin(b*11+seed)*9),bd=7+Math.abs(Math.cos(b*7+seed)*9),bh=8+Math.abs(Math.sin(b*13+seed)*20);
                     const ox=Math.sin(b*5+ri)*(maxW*0.33),oz=Math.cos(b*7+ci)*(maxW*0.33);
                     const m=new THREE.Mesh(new THREE.BoxGeometry(bw,bh,bd),bMats[bIdx%bMats.length]);bIdx++;
@@ -9679,10 +9937,10 @@ function buildWorld() {
             }
         }
     }
-    ROADS.forEach(rx=>{for(let z=-HALF;z<=HALF;z+=30){if(ROADS.some(rz=>Math.abs(z-rz)<ROAD_W/2+2))continue;addTree(rx+ROAD_W/2+3,z,treeMat,trunkMat);if(Math.abs(rx)<HALF)addTree(rx-ROAD_W/2-3,z,treeMat,trunkMat);}});
-    ROADS.forEach(rz=>{for(let x=-HALF;x<=HALF;x+=30){if(ROADS.some(rx=>Math.abs(x-rx)<ROAD_W/2+2))continue;addTree(x,rz+ROAD_W/2+3,treeMat,trunkMat);if(Math.abs(rz)<HALF)addTree(x,rz-ROAD_W/2-3,treeMat,trunkMat);}});
-    [-HALF-ROAD_W,HALF+ROAD_W].forEach(x=>{buildings.push(new THREE.Box3(new THREE.Vector3(x-5,-1,-HALF-40),new THREE.Vector3(x+5,5,HALF+40)));});
-    [-HALF-ROAD_W,HALF+ROAD_W].forEach(z=>{buildings.push(new THREE.Box3(new THREE.Vector3(-HALF-40,-1,z-5),new THREE.Vector3(HALF+40,5,z+5)));});
+    ROADS.forEach(rx=&gt;{for(let z=-HALF;z&lt;=HALF;z+=30){if(ROADS.some(rz=&gt;Math.abs(z-rz)&lt;ROAD_W/2+2))continue;addTree(rx+ROAD_W/2+3,z,treeMat,trunkMat);if(Math.abs(rx)&lt;HALF)addTree(rx-ROAD_W/2-3,z,treeMat,trunkMat);}});
+    ROADS.forEach(rz=&gt;{for(let x=-HALF;x&lt;=HALF;x+=30){if(ROADS.some(rx=&gt;Math.abs(x-rx)&lt;ROAD_W/2+2))continue;addTree(x,rz+ROAD_W/2+3,treeMat,trunkMat);if(Math.abs(rz)&lt;HALF)addTree(x,rz-ROAD_W/2-3,treeMat,trunkMat);}});
+    [-HALF-ROAD_W,HALF+ROAD_W].forEach(x=&gt;{buildings.push(new THREE.Box3(new THREE.Vector3(x-5,-1,-HALF-40),new THREE.Vector3(x+5,5,HALF+40)));});
+    [-HALF-ROAD_W,HALF+ROAD_W].forEach(z=&gt;{buildings.push(new THREE.Box3(new THREE.Vector3(-HALF-40,-1,z-5),new THREE.Vector3(HALF+40,5,z+5)));});
 }
 function addTree(x,z,lm,tm){const g=new THREE.Group();const tr=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.38,2.2,5),tm);tr.position.y=1.1;const lv=new THREE.Mesh(new THREE.SphereGeometry(1.8,6,5),lm);lv.position.y=3.5;lv.castShadow=true;g.add(tr);g.add(lv);g.position.set(x,0,z);scene.add(g);}
 
@@ -9717,22 +9975,22 @@ function createVehicle(color, label) {
     wGeo.rotateZ(Math.PI/2);
     const wMat = new THREE.MeshStandardMaterial({color:0x111111,roughness:0.9});
     const hubMat = new THREE.MeshStandardMaterial({color:0xaaaaaa,metalness:0.9,roughness:0.1});
-    [[1.15,0.44,1.5,'fl'],[-1.15,0.44,1.5,'fr'],[1.15,0.44,-1.5,'rl'],[-1.15,0.44,-1.5,'rr']].forEach(([wx,wy,wz,tag])=>{
+    [[1.15,0.44,1.5,'fl'],[-1.15,0.44,1.5,'fr'],[1.15,0.44,-1.5,'rl'],[-1.15,0.44,-1.5,'rr']].forEach(([wx,wy,wz,tag])=&gt;{
         const w = new THREE.Mesh(wGeo, wMat); w.name=tag;
         w.position.set(wx,wy,wz); w.castShadow=true; g.add(w);
         const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,0.4,6), hubMat);
-        hub.rotation.z = Math.PI/2; hub.position.set(wx+(wx>0?0.2:-0.2),wy,wz); g.add(hub);
+        hub.rotation.z = Math.PI/2; hub.position.set(wx+(wx&gt;0?0.2:-0.2),wy,wz); g.add(hub);
     });
 
     // Headlights
     const hlMat = new THREE.MeshStandardMaterial({color:0xffffee, emissive:0xffffee, emissiveIntensity:2});
-    [[0.7,0.6,2.25],[-0.7,0.6,2.25]].forEach(([hx,hy,hz])=>{
+    [[0.7,0.6,2.25],[-0.7,0.6,2.25]].forEach(([hx,hy,hz])=&gt;{
         const hl = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.25,0.1), hlMat);
         hl.position.set(hx,hy,hz); g.add(hl);
     });
     // Tail lights
     const tlMat = new THREE.MeshStandardMaterial({color:0xff2200, emissive:0xff2200, emissiveIntensity:1.5});
-    [[0.7,0.6,-2.25],[-0.7,0.6,-2.25]].forEach(([tx,ty,tz])=>{
+    [[0.7,0.6,-2.25],[-0.7,0.6,-2.25]].forEach(([tx,ty,tz])=&gt;{
         const tl = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.2,0.1), tlMat);
         tl.position.set(tx,ty,tz); g.add(tl);
     });
@@ -9754,7 +10012,7 @@ function createVehicle(color, label) {
 // ═══════════════════════════════════════════════════════════
 // Waypoints: intersections on road grid
 const WP = [];
-ROADS.forEach(z => ROADS.forEach(x => WP.push(new THREE.Vector3(x,0,z))));
+ROADS.forEach(z =&gt; ROADS.forEach(x =&gt; WP.push(new THREE.Vector3(x,0,z))));
 // WP[row*GRID+col] = intersection
 
 // Pre-defined AI routes (indices into WP)
@@ -9775,7 +10033,7 @@ const AI_NAMES = ['CAR_BOT1','CAR_BOT2','CAR_BOT3','CAR_BOT4','CAR_BOT5'];
 const AI_SPEEDS = [0.28,0.24,0.31,0.26,0.22];
 
 function spawnAICars() {
-    AI_ROUTES.forEach((route, i) => {
+    AI_ROUTES.forEach((route, i) =&gt; {
         const col = CAR_COLORS[(i+2) % CAR_COLORS.length];
         const mesh = createVehicle(col, '🤖 '+AI_NAMES[i].replace('CAR_',''));
         const startWP = WP[route[0]];
@@ -9796,7 +10054,7 @@ function spawnAICars() {
 }
 
 function updateAI() {
-    aiCars.forEach((ai, idx) => {
+    aiCars.forEach((ai, idx) =&gt; {
         const cur = ai.mesh.position;
         const target = WP[ai.route[ai.wpIdx]];
         const dx = target.x - cur.x;
@@ -9804,20 +10062,20 @@ function updateAI() {
         const dist = Math.sqrt(dx*dx + dz*dz);
 
         // Advance waypoint when close
-        if (dist < 3.5) {
+        if (dist &lt; 3.5) {
             ai.wpIdx = (ai.wpIdx+1) % ai.route.length;
         }
 
         // Steering toward waypoint
         const desiredDir = Math.atan2(dx, dz);
         let dA = desiredDir - ai.dir;
-        while (dA > Math.PI) dA -= Math.PI*2;
-        while (dA < -Math.PI) dA += Math.PI*2;
+        while (dA &gt; Math.PI) dA -= Math.PI*2;
+        while (dA &lt; -Math.PI) dA += Math.PI*2;
         ai.dir += Math.sign(dA) * Math.min(Math.abs(dA), 0.055);
 
         // Speed control
         const turnSharpness = Math.abs(dA);
-        const targetSpd = turnSharpness > 0.4 ? ai.targetSpeed * 0.6 : ai.targetSpeed;
+        const targetSpd = turnSharpness &gt; 0.4 ? ai.targetSpeed * 0.6 : ai.targetSpeed;
         ai.speed += (targetSpd - ai.speed) * 0.05;
 
         // Move
@@ -9827,13 +10085,13 @@ function updateAI() {
         // Simple collision avoid with player
         const pdx = playerCar ? playerCar.position.x - nx : 999;
         const pdz = playerCar ? playerCar.position.z - nz : 999;
-        if (Math.sqrt(pdx*pdx+pdz*pdz) > 4) {
+        if (Math.sqrt(pdx*pdx+pdz*pdz) &gt; 4) {
             ai.mesh.position.set(nx, 0.4, nz);
         }
         ai.mesh.rotation.y = ai.dir;
 
         // Wheel spin
-        ai.mesh.children.forEach(ch => {
+        ai.mesh.children.forEach(ch =&gt; {
             if(ch.name&amp;&amp;ch.name.length===2) ch.rotation.x += ai.speed*3;
         });
     });
@@ -9849,7 +10107,7 @@ function updatePhysics() {
     if (keys.up)   speed = Math.min(speed+ACCEL, MAX_SPD);
     else if(keys.down) speed = Math.max(speed-BRAKE, -MAX_REV);
     else speed *= (1-FRICTION);
-    if (Math.abs(speed)<0.001) speed=0;
+    if (Math.abs(speed)&lt;0.001) speed=0;
 
     // Steering (speed-sensitive)
     const spFactor = Math.min(Math.abs(speed)/MAX_SPD, 1);
@@ -9888,7 +10146,7 @@ function updatePhysics() {
     }
 
     // Wheel spin + front wheel steer
-    playerCar.children.forEach(ch => {
+    playerCar.children.forEach(ch =&gt; {
         if (!ch.name || ch.name.length!==2) return;
         ch.rotation.x -= speed*3;
         if (ch.name[0]==='f') ch.rotation.y = -steer*8;
@@ -9910,17 +10168,13 @@ function updatePhysics() {
     // Speedometer
     const kmh = Math.round(Math.abs(speed)*130);
     document.getElementById('speed-val').innerText = kmh;
-    document.getElementById('gear-display').innerText = speed>0.02?'D':speed<-0.02?'R':'N';
+    document.getElementById('gear-display').innerText = speed&gt;0.02?'D':speed&lt;-0.02?'R':'N';
 
-    // Firebase sync (throttled)
+    // Socket.io sync (throttled to ~15fps)
     const now=Date.now();
-    if (roomId &amp;&amp; myId &amp;&amp; now-lastSync>60) {
+    if (roomId &amp;&amp; myId &amp;&amp; now-lastSync&gt;65) {
         lastSync=now;
-        db.ref('car_world/'+roomId+'/players/'+myId).update({x:playerCar.position.x,z:playerCar.position.z,r:carDir});
-        if(now-lastActivity>120000) {
-            db.ref('car_world/'+roomId).update({lastActivity:now});
-            lastActivity=now;
-        }
+        socket.emit('car:pos', { x:playerCar.position.x, z:playerCar.position.z, r:carDir });
     }
 }
 
@@ -9942,19 +10196,19 @@ function drawMinimap() {
 
     // Roads
     ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=ROAD_W*scale;
-    ROADS.forEach(r=>{
+    ROADS.forEach(r=&gt;{
         ctx.beginPath(); ctx.moveTo(r*scale+ox,-HALF*scale+oz); ctx.lineTo(r*scale+ox,HALF*scale+oz); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(-HALF*scale+ox,r*scale+oz); ctx.lineTo(HALF*scale+ox,r*scale+oz); ctx.stroke();
     });
 
     // AI cars (orange dots)
-    aiCars.forEach(ai=>{
+    aiCars.forEach(ai=&gt;{
         const ax=ai.mesh.position.x*scale+ox, az=ai.mesh.position.z*scale+oz;
         ctx.fillStyle='#ff8c00'; ctx.beginPath(); ctx.arc(ax,az,3.5,0,Math.PI*2); ctx.fill();
     });
 
     // Other players (blue dots)
-    Object.values(otherCars).forEach(op=>{
+    Object.values(otherCars).forEach(op=&gt;{
         const px=op.position.x*scale+ox, pz=op.position.z*scale+oz;
         ctx.fillStyle='#3498db'; ctx.beginPath(); ctx.arc(px,pz,4,0,Math.PI*2); ctx.fill();
     });
@@ -9978,7 +10232,7 @@ function drawMinimap() {
 // ═══════════════════════════════════════════════════════════
 function syncOtherPlayers(playersData) {
     if (!playersData) return;
-    Object.keys(playersData).forEach(pid => {
+    Object.keys(playersData).forEach(pid =&gt; {
         if (pid===myId) return;
         const d = playersData[pid];
         if (!otherCars[pid]) {
@@ -9993,7 +10247,7 @@ function syncOtherPlayers(playersData) {
         }
     });
     // Remove disconnected
-    Object.keys(otherCars).forEach(pid => {
+    Object.keys(otherCars).forEach(pid =&gt; {
         if (!playersData[pid]) { scene.remove(otherCars[pid]); delete otherCars[pid]; }
     });
     // Update count
@@ -10001,7 +10255,7 @@ function syncOtherPlayers(playersData) {
 }
 
 function lerpOtherCars() {
-    Object.values(otherCars).forEach(op=>{
+    Object.values(otherCars).forEach(op=&gt;{
         if (op.userData.tx!==undefined) {
             op.position.x += (op.userData.tx - op.position.x)*0.15;
             op.position.z += (op.userData.tz - op.position.z)*0.15;
@@ -10013,9 +10267,13 @@ function lerpOtherCars() {
 // ═══════════════════════════════════════════════════════════
 // GAME LOOP
 // ═══════════════════════════════════════════════════════════
-let lastTime=0;
-function animate(t=0) {
+let lastTime = 0;
+const _FRAME_MS = 1000 / 60;
+function animate(t = 0) {
     requestAnimationFrame(animate);
+    const dt = t - lastTime;
+    if (dt &lt; _FRAME_MS - 1) return; // 60fps lock
+    lastTime = t - (dt % _FRAME_MS); // compensate drift
     updatePhysics();
     updateAI();
     lerpOtherCars();
@@ -10028,23 +10286,23 @@ function animate(t=0) {
 // ═══════════════════════════════════════════════════════════
 function setupControls() {
     // Keyboard
-    window.addEventListener('keydown', e=>{
+    window.addEventListener('keydown', e=&gt;{
         if(e.code==='KeyW'||e.code==='ArrowUp') keys.up=1;
         if(e.code==='KeyS'||e.code==='ArrowDown') keys.down=1;
         if(e.code==='KeyA'||e.code==='ArrowLeft') keys.left=1;
         if(e.code==='KeyD'||e.code==='ArrowRight') keys.right=1;
     });
-    window.addEventListener('keyup', e=>{
+    window.addEventListener('keyup', e=&gt;{
         if(e.code==='KeyW'||e.code==='ArrowUp') keys.up=0;
         if(e.code==='KeyS'||e.code==='ArrowDown') keys.down=0;
         if(e.code==='KeyA'||e.code==='ArrowLeft') keys.left=0;
         if(e.code==='KeyD'||e.code==='ArrowRight') keys.right=0;
     });
     // Touch
-    const tb=(id,k)=>{
+    const tb=(id,k)=&gt;{
         const el=document.getElementById(id);
-        el.addEventListener('touchstart',e=>{e.preventDefault();keys[k]=1;el.classList.add('pressed');},{passive:false});
-        el.addEventListener('touchend',e=>{e.preventDefault();keys[k]=0;el.classList.remove('pressed');},{passive:false});
+        el.addEventListener('touchstart',e=&gt;{e.preventDefault();keys[k]=1;el.classList.add('pressed');},{passive:false});
+        el.addEventListener('touchend',e=&gt;{e.preventDefault();keys[k]=0;el.classList.remove('pressed');},{passive:false});
     };
     tb('t-gas','up'); tb('t-brake','down'); tb('t-left','left'); tb('t-right','right');
     document.getElementById('touch-controls').style.display='flex';
@@ -10054,56 +10312,45 @@ function setupControls() {
 // ROOM SYSTEM
 // ═══════════════════════════════════════════════════════════
 function createRoom() {
-    roomId = Math.floor(1000+Math.random()*9000).toString();
-    myId = 'p1';
-    db.ref('car_world/'+roomId).set({
-        status:'waiting', lastActivity:Date.now(),
-        players:{p1:{x:0,z:0,r:0,n:playerName,color:0xe74c3c}}
-    }).then(()=>{
-        document.getElementById('room-code-display').innerText = roomId;
-        db.ref('car_world/'+roomId+'/players/p1').onDisconnect().remove();
-        var _roomEmptyTimer=null;
-        db.ref('car_world/'+roomId+'/players').on('value',snap=>{
-            if(snap.exists()) { syncOtherPlayers(snap.val()); if(_roomEmptyTimer){clearTimeout(_roomEmptyTimer);_roomEmptyTimer=null;} }
-            else {
-                if(!_roomEmptyTimer) _roomEmptyTimer=setTimeout(function(){
-                    db.ref('car_world/'+roomId).remove();
-                },8000);
-            }
-        });
-        startGame(ROADS[0]+3, ROADS[0]+3);
-    });
+    socket.emit('car:create', { playerName, color: CAR_COLORS[0] });
 }
+socket.on('car:created', ({ roomId: rid, myId: mid }) => {
+    roomId = rid; myId = mid;
+    document.getElementById('room-code-display').innerText = roomId;
+    startGame(ROADS[0]+3, ROADS[0]+3);
+});
 
 function joinRoom() {
     const code = document.getElementById('roomInput').value.trim();
-    if (!code||code.length<4) return;
-    db.ref('car_world/'+code).once('value').then(snap=>{
-        if(!snap.exists()) { document.getElementById('lobby-status').innerText='Room not found!'; return; }
-        const players = snap.val().players||{};
-        let slot=null;
-        for(let i=1;i<=8;i++) {
-            const k='p'+i;
-            if(!players[k]||players[k].n===playerName) {slot=k;break;}
-        }
-        if(!slot) { document.getElementById('lobby-status').innerText='Room full!'; return; }
-        roomId=code; myId=slot;
-        const color=CAR_COLORS[(parseInt(slot.replace('p',''))-1)%CAR_COLORS.length];
-        db.ref('car_world/'+roomId+'/players/'+myId).set({x:5,z:5,r:0,n:playerName,color});
-        db.ref('car_world/'+roomId+'/players/'+myId).onDisconnect().remove();
-        document.getElementById('room-code-display').innerText = roomId;
-        var _roomEmptyTimerJ=null;
-        db.ref('car_world/'+roomId+'/players').on('value',snap=>{
-            if(snap.exists()) { syncOtherPlayers(snap.val()); if(_roomEmptyTimerJ){clearTimeout(_roomEmptyTimerJ);_roomEmptyTimerJ=null;} }
-            else {
-                if(!_roomEmptyTimerJ) _roomEmptyTimerJ=setTimeout(function(){
-                    db.ref('car_world/'+roomId).remove();
-                },8000);
-            }
-        });
-        startGame(ROADS[1]+3, ROADS[1]+3);
-    });
+    if (!code||code.length&lt;4) return;
+    socket.emit('car:join', { code, playerName, color: CAR_COLORS[1] });
 }
+socket.on('car:joined', ({ roomId: rid, myId: mid, players }) => {
+    roomId = rid; myId = mid;
+    document.getElementById('room-code-display').innerText = roomId;
+    syncOtherPlayers(players);
+    startGame(ROADS[1]+3, ROADS[1]+3);
+});
+socket.on('car:error', msg => { document.getElementById('lobby-status').innerText = msg; });
+socket.on('car:player-joined', ({ id, x, z, r, n, color }) => {
+    if (!otherCars[id]) {
+        const col = color || CAR_COLORS[Object.keys(otherCars).length % CAR_COLORS.length];
+        otherCars[id] = createVehicle(col, n||id);
+        otherCars[id].position.set(x||0, 0.4, z||0);
+        scene.add(otherCars[id]);
+        document.getElementById('player-count').innerText = (Object.keys(otherCars).length+1) + ' player(s)';
+    }
+});
+socket.on('car:pos', ({ id, x, z, r }) => {
+    if (id === myId) return;
+    if (otherCars[id]) {
+        otherCars[id].userData.tx = x; otherCars[id].userData.tz = z; otherCars[id].userData.tr = r;
+    }
+});
+socket.on('car:player-left', ({ id }) => {
+    if (otherCars[id]) { scene.remove(otherCars[id]); delete otherCars[id]; }
+    document.getElementById('player-count').innerText = (Object.keys(otherCars).length+1) + ' player(s)';
+});
 
 function startGame(spawnX, spawnZ) {
     const col = CAR_COLORS[(parseInt(myId.replace('p',''))-1)%CAR_COLORS.length];
@@ -10123,12 +10370,12 @@ function startGame(spawnX, spawnZ) {
     var hist=[];
     function measure(){
         var t0=performance.now();
-        fetch('https://bittuhere-90415-default-rtdb.asia-southeast1.firebasedatabase.app/.json?shallow=true',{cache:'no-store'})
+        fetch('https://arcade-hub-email.onrender.com/ping',{cache:'no-store'})
         .then(function(){
-            var p=Math.round(performance.now()-t0); hist.push(p); if(hist.length>5)hist.shift();
+            var p=Math.round(performance.now()-t0); hist.push(p); if(hist.length&gt;5)hist.shift();
             var avg=Math.round(hist.reduce(function(a,b){return a+b;},0)/hist.length);
             var b=document.getElementById('car-ping-badge'),m=document.getElementById('car-ping-ms');
-            if(b&amp;&amp;m){m.innerText=avg;b.className='ping-badge '+(avg<80?'ping-good':avg<200?'ping-medium':'ping-bad');}
+            if(b&amp;&amp;m){m.innerText=avg;b.className='ping-badge '+(avg&lt;80?'ping-good':avg&lt;200?'ping-medium':'ping-bad');}
         }).catch(function(){
             var b=document.getElementById('car-ping-badge'),m=document.getElementById('car-ping-ms');
             if(b&amp;&amp;m){m.innerText='999+';b.className='ping-badge ping-bad';}
@@ -10142,8 +10389,28 @@ function startGame(spawnX, spawnZ) {
 // ═══ IN-GAME CHAT ═══
 var chatOpen=false;
 function toggleChat(){var cp=document.getElementById('chat-panel');chatOpen=!chatOpen;cp.style.transform=chatOpen?'translateX(0)':'translateX(100%)';if(chatOpen){document.getElementById('chat-input').focus();var u=document.getElementById('chat-unread');u.style.display='none';u.innerText='';}}
-function sendChat(){var inp=document.getElementById('chat-input');var txt=(inp.value||'').trim();if(!txt||!roomId)return;db.ref('car_world/'+roomId+'/chat').push({n:playerName,msg:txt,t:Date.now()});inp.value='';}
-function listenChat(){if(!roomId)return;var msgDiv=document.getElementById('chat-messages');var unread=document.getElementById('chat-unread');var uc=0;db.ref('car_world/'+roomId+'/chat').limitToLast(30).on('child_added',function(snap){var d=snap.val();var div=document.createElement('div');div.style.cssText='margin-bottom:4px;font-size:.82rem;word-break:break-word;';var isMe=d.n===playerName;div.innerHTML='<span style=&quot;color:'+(isMe?'#00f3ff':'#2ecc71')+';font-weight:bold;&quot;>'+d.n+':</span> <span style=&quot;color:rgba(255,255,255,.85);&quot;>'+d.msg+'</span>';msgDiv.appendChild(div);msgDiv.scrollTop=msgDiv.scrollHeight;if(!chatOpen){uc++;unread.style.display='flex';unread.innerText=uc>9?'9+':uc;}});}
+function sendChat(){
+    var inp=document.getElementById('chat-input');
+    var txt=(inp.value||'').trim();
+    if(!txt||!roomId)return;
+    socket.emit('car:chat',{msg:txt});
+    inp.value='';
+}
+function listenChat(){
+    if(!roomId)return;
+    var msgDiv=document.getElementById('chat-messages');
+    var unread=document.getElementById('chat-unread');
+    var uc=0;
+    socket.on('car:chat',function(d){
+        var div=document.createElement('div');
+        div.style.cssText='margin-bottom:4px;font-size:.82rem;word-break:break-word;';
+        var isMe=d.n===playerName;
+        div.innerHTML='<span style="color:'+(isMe?'#00f3ff':'#2ecc71')+';font-weight:bold;">'+d.n+':</span> <span style="color:rgba(255,255,255,.85);">'+d.msg+'</span>';
+        msgDiv.appendChild(div);msgDiv.scrollTop=msgDiv.scrollHeight;
+        if(!chatOpen){uc++;unread.style.display='flex';unread.innerText=uc>9?'9+':uc;}
+    });
+}
+{if(!roomId)return;var msgDiv=document.getElementById('chat-messages');var unread=document.getElementById('chat-unread');var uc=0;db.ref('car_world/'+roomId+'/chat').limitToLast(30).on('child_added',function(snap){var d=snap.val();var div=document.createElement('div');div.style.cssText='margin-bottom:4px;font-size:.82rem;word-break:break-word;';var isMe=d.n===playerName;div.innerHTML='&lt;span style=&quot;color:'+(isMe?'#00f3ff':'#2ecc71')+';font-weight:bold;&quot;&gt;'+d.n+':&lt;/span&gt; &lt;span style=&quot;color:rgba(255,255,255,.85);&quot;&gt;'+d.msg+'&lt;/span&gt;';msgDiv.appendChild(div);msgDiv.scrollTop=msgDiv.scrollHeight;if(!chatOpen){uc++;unread.style.display='flex';unread.innerText=uc&gt;9?'9+':uc;}});}
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&amp;&amp;chatOpen){sendChat();e.preventDefault();}if(e.key==='Escape'&amp;&amp;chatOpen){toggleChat();}});
 // AUTO-JOIN FROM INVITE
 // ═══════════════════════════════════════════════════════════
@@ -10160,15 +10427,15 @@ window.addEventListener('message', function(e){
 window.addEventListener('load', function(){
     initThree();
     // Hide loading, show lobby after world builds
-    setTimeout(()=>{
+    setTimeout(()=&gt;{
         document.getElementById('loading-screen').style.display='none';
         document.getElementById('lobby').style.display='flex';
     }, 800);
 });
 
-</script>
-</body>
-</html>"></iframe>
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
         </div>
     </div>
 
@@ -10189,24 +10456,27 @@ window.addEventListener('load', function(){
                     redirect in <span id="ty-seconds" style="color:#00f3ff;font-weight:bold;">10</span>s</div>
             </div>
         </div>
-        <div id="section-game-arcadecraft" class="spa-section hidden-right game-frame">
+        </div>
+    </div>
+
+    <!-- ARCADECRAFT SECTION -->
+    <div id="section-game-arcadecraft" class="spa-section hidden-right game-frame">
         <div class="game-section-wrapper">
             <iframe id="iframe-arcadecraft" allow="fullscreen; screen-orientation; clipboard-read; clipboard-write"
                 style="width:100%;height:100%;border:none;display:block;" src="eaglercraft.html">
             </iframe>
         </div>
-        </div>
-        <!-- ArcadeCraft fixed back button (shown only when in game) -->
-        <button id="arcadecraft-back-btn" onclick="spaGoBack()" style="
-            display:none;position:fixed;top:12px;left:12px;z-index:99999;
-            background:rgba(0,0,0,0.60);backdrop-filter:blur(8px);
-            border:1px solid rgba(255,255,255,0.28);color:#fff;
-            border-radius:22px;padding:7px 16px;font-size:.8rem;
-            cursor:pointer;letter-spacing:1px;font-family:inherit;
-            box-shadow:0 2px 12px rgba(0,0,0,0.5);">
-            &#8592; Hub
-        </button>
     </div>
+    <!-- ArcadeCraft fixed back button (shown only when in game) -->
+    <button id="arcadecraft-back-btn" onclick="spaGoBack()" style="
+        display:none;position:fixed;top:12px;left:12px;z-index:99999;
+        background:rgba(0,0,0,0.60);backdrop-filter:blur(8px);
+        border:1px solid rgba(255,255,255,0.28);color:#fff;
+        border-radius:22px;padding:7px 16px;font-size:.8rem;
+        cursor:pointer;letter-spacing:1px;font-family:inherit;
+        box-shadow:0 2px 12px rgba(0,0,0,0.5);">
+        &#8592; Hub
+    </button>
     <style>
         /* ty-container border glow via opacity on a pseudo-layer instead of animating box-shadow */
         @keyframes tyGlow {
@@ -10243,10 +10513,13 @@ window.addEventListener('load', function(){
             measurementId: "G-JD1YFCG7G3"
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        // ═══════════════════════════════════════════════════════
-        //  LIFECYCLE MANAGER  — all cleanup lives here.
+        const db   = firebase.database();
+        const auth = firebase.auth();
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw5RNkwwAM9OR8PMcb1A7dpq8Tf69inqb92bsROBhbkouwthfe2gJivY9fwMqkQdc_J/exec';
+        async function gasCall(payload) {
+            const r = await fetch(GAS_URL, { method:'POST', body:JSON.stringify(payload) });
+            return r.json();
+        }
         //  LC.timer(sectionId, id)        register a timer
         //  LC.fb(sectionId, ref, ev, fn)  register a Firebase listener
         //  LC.fn(sectionId, fn)           register any cleanup fn
@@ -10575,70 +10848,313 @@ function disableGlobalZoom() {
         const EYEOPEN = 'data:image/png;base64,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';
         const EYECLOSED = 'data:image/png;base64,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';
 
+        // ── Pending registration state (held in memory until email verified) ──
+        let _pendingReg    = null;  // { username, email, passwordHash }
+        let _pendingGoogle = null;  // { email } for Google new-user setup
+        let _verifyMode    = '';    // 'new-reg' | 'existing'
+
         function toggleMode() {
             isSignup = !isSignup;
             document.getElementById('login-header').innerText = isSignup ? 'SIGN UP' : 'LOGIN';
             document.getElementById('login-sub').innerText = isSignup ? 'Claim your Unique ID' : 'Enter the Arcade World';
             document.getElementById('submit-btn').innerText = isSignup ? 'CREATE ACCOUNT' : 'ENTER';
             document.getElementById('switch-btn').innerText = isSignup ? 'Have an account? Login' : 'New here? Create ID';
+            document.getElementById('login-username').placeholder = isSignup ? 'Username (a-z 0-9)' : 'Username or Email';
             document.getElementById('login-status').innerText = '';
             document.getElementById('trouble-link').style.display = 'none';
+            document.getElementById('login-email').style.display = isSignup ? 'block' : 'none';
+            document.getElementById('forgot-link').style.display = isSignup ? 'none' : 'block';
+            document.getElementById('google-btn-text').innerText = isSignup ? 'SIGN UP WITH GOOGLE' : 'CONTINUE WITH GOOGLE';
         }
         function togglePass() {
             const p = document.getElementById('login-password'), icon = document.getElementById('eye-icon');
-            const val = p.value;  // save value before type change (Chrome clears autofill on type change)
+            const val = p.value;
             if (p.type === 'password') { p.type = 'text'; icon.src = EYECLOSED; }
             else { p.type = 'password'; icon.src = EYEOPEN; }
-            p.value = val;  // restore value
+            p.value = val;
         }
+
         async function processAuth() {
-            const user = document.getElementById('login-username').value.trim().toLowerCase();
-            const rawPass = document.getElementById('login-password').value;
-            const pass = await hashPw(rawPass);
-            const status = document.getElementById('login-status');
-            const loader = document.getElementById('login-loader');
-            const showT = () => document.getElementById('trouble-link').style.display = 'block';
-            if (user.length < 3 || rawPass.length < 3) { status.innerText = 'Username/Password too short.'; status.className = 'status-msg l-error'; showT(); return; }
-            if (!/^[a-z0-9]+$/.test(user)) { status.innerText = 'Username: Letters & Numbers only.'; status.className = 'status-msg l-error'; showT(); return; }
-            loader.style.display = 'block'; status.innerText = ''; document.getElementById('trouble-link').style.display = 'none';
+            const rawInput = document.getElementById('login-username').value.trim();
+            const rawPass  = document.getElementById('login-password').value;
+            const status   = document.getElementById('login-status');
+            const loader   = document.getElementById('login-loader');
+            const showT    = () => document.getElementById('trouble-link').style.display = 'block';
+            const isEmail  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawInput);
+            const user     = isEmail ? null : rawInput.toLowerCase();
+
+            if (rawPass.length < 3) { status.innerText = 'Password too short.'; status.className = 'status-msg l-error'; showT(); return; }
+
             if (isSignup) {
-                db.ref('users/' + user).once('value').then(snap => {
-                    if (snap.exists()) { loader.style.display = 'none'; status.innerText = 'Username taken! Choose another.'; status.className = 'status-msg l-error'; showT(); }
-                    else {
-                        db.ref('users/' + user).set({ password: pass, score: 0, dino_highscore: 0, flappy_highscore: 0, snake_highscore: 0, pacman_highscore: 0, createdAt: Date.now() }).then(() => {
-                            loader.style.display = 'none'; status.innerText = 'Account Created! Logging in...'; status.className = 'status-msg l-success'; loginSuccess(user);
-                        }).catch(() => { loader.style.display = 'none'; status.innerText = 'Error creating account.'; status.className = 'status-msg l-error'; showT(); });
-                    }
-                }).catch(() => { loader.style.display = 'none'; status.innerText = 'Database Connection Error.'; status.className = 'status-msg l-error'; showT(); });
-            } else {
-                db.ref('users/' + user).once('value').then(snap => {
+                if (!user) { status.innerText = 'Username must be letters & numbers, not an email.'; status.className = 'status-msg l-error'; return; }
+                if (user.length < 3) { status.innerText = 'Username too short (min 3 chars).'; status.className = 'status-msg l-error'; return; }
+                if (!/^[a-z0-9]+$/.test(user)) { status.innerText = 'Username: Letters & Numbers only.'; status.className = 'status-msg l-error'; showT(); return; }
+                const emailVal = (document.getElementById('login-email').value || '').trim().toLowerCase();
+                if (!emailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                    status.innerText = 'Please enter a valid email address.'; status.className = 'status-msg l-error'; return;
+                }
+                loader.style.display = 'block'; status.innerText = 'Checking availability...';
+                try {
+                    const [userSnap, emailSnap] = await Promise.all([
+                        db.ref('users/' + user).once('value'),
+                        db.ref('users').orderByChild('email').equalTo(emailVal).once('value')
+                    ]);
+                    if (userSnap.exists()) { loader.style.display='none'; status.innerText='Username taken! Choose another.'; status.className='status-msg l-error'; showT(); return; }
+                    if (emailSnap.exists()) { loader.style.display='none'; status.innerText='Email already registered! Try logging in.'; status.className='status-msg l-error'; return; }
+                    status.innerText = 'Sending verification code...';
+                    const res = await gasCall({ action:'send-code', email:emailVal, username:user, purpose:'verify' });
                     loader.style.display = 'none';
-                    if (snap.exists()) {
+                    if (!res.ok) { status.innerText = 'Failed to send code: ' + (res.error || 'Try again.'); status.className = 'status-msg l-error'; return; }
+                    _pendingReg = { username: user, email: emailVal, passwordHash: await hashPw(rawPass) };
+                    _verifyMode = 'new-reg';
+                    _openVerifyPage(emailVal);
+                } catch(e) { loader.style.display='none'; status.innerText='Error: ' + e.message; status.className='status-msg l-error'; showT(); }
+            } else {
+                loader.style.display = 'block'; status.innerText = '';
+                if (isEmail) {
+                    db.ref('users').orderByChild('email').equalTo(rawInput.toLowerCase()).once('value').then(snap => {
+                        loader.style.display = 'none';
+                        if (!snap.exists()) { status.innerText = 'No account with this email.'; status.className = 'status-msg l-error'; showT(); return; }
+                        let foundUser = null, foundData = null;
+                        snap.forEach(c => { foundUser = c.key; foundData = c.val(); });
+                        hashPw(rawPass).then(pass => {
+                            if (foundData.password !== pass) { status.innerText = 'Wrong Password.'; status.className = 'status-msg l-error'; showT(); return; }
+                            if (foundData.blocked) { status.innerText = 'Access Denied: Account is BLOCKED!'; status.className = 'status-msg l-error'; return; }
+                            status.innerText = 'Success!'; status.className = 'status-msg l-success'; loginSuccess(foundUser, foundData);
+                        });
+                    }).catch(() => { loader.style.display='none'; status.innerText='Connection Error.'; showT(); });
+                } else {
+                    if (!user || user.length < 3) { loader.style.display='none'; status.innerText='Username too short.'; status.className='status-msg l-error'; showT(); return; }
+                    if (!/^[a-z0-9]+$/.test(user)) { loader.style.display='none'; status.innerText='Username: Letters & Numbers only.'; status.className='status-msg l-error'; showT(); return; }
+                    const pass = await hashPw(rawPass);
+                    db.ref('users/' + user).once('value').then(snap => {
+                        loader.style.display = 'none';
+                        if (!snap.exists()) { status.innerText = 'User not found.'; status.className = 'status-msg l-error'; showT(); return; }
                         const d = snap.val();
-                        if (d.password === pass) {
-                            if (d.blocked === true) { status.innerText = 'Access Denied: This account is BLOCKED!'; status.className = 'status-msg l-error'; showT(); return; }
-                            status.innerText = 'Success!'; status.className = 'status-msg l-success'; loginSuccess(user);
-                        } else { status.innerText = 'Wrong Password.'; status.className = 'status-msg l-error'; showT(); }
-                    } else { status.innerText = 'User not found.'; status.className = 'status-msg l-error'; showT(); }
-                }).catch(() => { loader.style.display = 'none'; status.innerText = 'Connection Error.'; showT(); });
+                        if (d.password !== pass) { status.innerText = 'Wrong Password.'; status.className = 'status-msg l-error'; showT(); return; }
+                        if (d.blocked) { status.innerText = 'Access Denied: Account is BLOCKED!'; status.className = 'status-msg l-error'; return; }
+                        status.innerText = 'Success!'; status.className = 'status-msg l-success'; loginSuccess(user, d);
+                    }).catch(() => { loader.style.display='none'; status.innerText='Connection Error.'; showT(); });
+                }
             }
         }
-        function loginSuccess(u) {
+
+        function loginSuccess(u, userData) {
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('playerName', u);
             try { db.ref('users/' + u).update({ lastLogin: firebase.database.ServerValue.TIMESTAMP }); } catch (e) { }
-            // Clear login inputs 3s after success so values don't linger
             setTimeout(function() {
-                var un = document.getElementById('login-username');
-                var pw = document.getElementById('login-password');
-                var st = document.getElementById('login-status');
-                if (un) un.value = '';
-                if (pw) pw.value = '';
-                if (st) st.innerText = '';
+                ['login-username','login-password'].forEach(id => { var el=document.getElementById(id); if(el) el.value=''; });
+                var st = document.getElementById('login-status'); if(st) st.innerText='';
             }, 3000);
-            setTimeout(() => { initHub(); MapsTo('section-hub', 'right'); }, 800);
+            const d = userData || {};
+            const needsVerify = (d.forceVerify === true) || (d.emailVerified === false && d.email_verification !== false && !!d.email);
+            if (needsVerify) {
+                _verifyMode = 'existing';
+                setTimeout(async () => {
+                    const res = await gasCall({ action:'send-code', email:d.email, username:u, purpose:'verify' }).catch(()=>({ok:false}));
+                    if (res.ok) _openVerifyPage(d.email);
+                    else MapsTo('section-hub','right');
+                }, 500);
+            } else {
+                setTimeout(() => MapsTo('section-hub', 'right'), 800);
+            }
         }
+
+        // ── Email Verify Page ─────────────────────────────────────────────
+        let _verifyEmailAddr = '';
+        function _openVerifyPage(email) {
+            _verifyEmailAddr = email;
+            document.getElementById('verify-code-input').value = '';
+            document.getElementById('verify-status').innerText = '';
+            document.getElementById('verify-page-desc').innerHTML =
+                'A 6-digit code was sent to:<br><strong style="color:#00f3ff;">' + email + '</strong><br>Enter it below to continue.';
+            MapsTo('section-verify-email', 'right');
+        }
+        async function verifyConfirmCode() {
+            const code = document.getElementById('verify-code-input').value.trim();
+            const st   = document.getElementById('verify-status');
+            if (!code || code.length !== 6) { st.style.color='#ff3366'; st.innerText='Enter the 6-digit code.'; return; }
+            st.style.color = '#00f3ff'; st.innerText = 'Verifying...';
+            const res = await gasCall({ action:'verify-code', email:_verifyEmailAddr, code });
+            if (!res.ok) { st.style.color='#ff3366'; st.innerText = res.error || 'Wrong code. Try again.'; return; }
+            if (_verifyMode === 'new-reg' && _pendingReg) {
+                st.innerText = 'Creating account...';
+                const { username, email, passwordHash } = _pendingReg;
+                const userData = { password:passwordHash, score:0, dino_highscore:0, flappy_highscore:0, snake_highscore:0, pacman_highscore:0, createdAt:Date.now(), email, emailVerified:true };
+                await db.ref('users/' + username).set(userData);
+                gasCall({ action:'send-welcome', email, username }).catch(()=>{});
+                _pendingReg = null;
+                st.style.color='#00ff88'; st.innerText = 'Account created! Welcome!';
+                setTimeout(() => loginSuccess(username, userData), 900);
+            } else if (_verifyMode === 'existing') {
+                const u = localStorage.getItem('playerName');
+                if (u) await db.ref('users/' + u).update({ emailVerified:true, forceVerify:null });
+                st.style.color='#00ff88'; st.innerText = 'Email verified!';
+                setTimeout(() => MapsTo('section-hub','right'), 900);
+            }
+        }
+        async function verifyResendCode() {
+            const st = document.getElementById('verify-status');
+            st.style.color='#00f3ff'; st.innerText='Resending...';
+            const username = (_pendingReg && _pendingReg.username) || localStorage.getItem('playerName') || '';
+            const res = await gasCall({ action:'send-code', email:_verifyEmailAddr, username, purpose:'verify' }).catch(()=>({ok:false}));
+            st.style.color = res.ok ? '#00ff88' : '#ff3366';
+            st.innerText = res.ok ? 'New code sent!' : (res.error || 'Failed to resend.');
+        }
+        function verifyCancel() {
+            _pendingReg = null; _verifyMode = '';
+            localStorage.clear();
+            MapsTo('section-login', 'left');
+        }
+
+        // ── GOOGLE SIGN IN ────────────────────────────────────────────────
+        // Handle redirect result on page load (for mobile/popup-blocked fallback)
+        auth.getRedirectResult().then(result => {
+            if (result && result.user) _handleGoogleUser(result.user.email.toLowerCase());
+        }).catch(err => {
+            if (err.code && err.code !== 'auth/no-current-user' && err.code !== 'auth/null-user')
+                console.warn('Google redirect result:', err.message);
+        });
+
+        async function _handleGoogleUser(gEmail) {
+            let found = null;
+            const snap1 = await db.ref('users').orderByChild('googleEmail').equalTo(gEmail).once('value');
+            if (snap1.exists()) { snap1.forEach(c => { found = { key:c.key, val:c.val() }; }); }
+            if (!found) {
+                const snap2 = await db.ref('users').orderByChild('email').equalTo(gEmail).once('value');
+                if (snap2.exists()) { snap2.forEach(c => { found = { key:c.key, val:c.val() }; }); }
+            }
+            if (found) {
+                if (!found.val.googleEmail) await db.ref('users/' + found.key).update({ googleEmail:gEmail, emailVerified:true });
+                if (found.val.blocked) { showNotify('Account is BLOCKED.', 'error'); return; }
+                loginSuccess(found.key, Object.assign({}, found.val, { emailVerified:true }));
+            } else {
+                _pendingGoogle = { email: gEmail };
+                document.getElementById('google-setup-email-label').innerText = gEmail;
+                document.getElementById('gsetup-username').value = '';
+                document.getElementById('gsetup-password').value = '';
+                document.getElementById('gsetup-confirm').value = '';
+                document.getElementById('gsetup-status').innerText = '';
+                MapsTo('section-google-setup', 'right');
+            }
+        }
+
+        async function googleSignIn() {
+            const btn = document.getElementById('google-btn');
+            btn.disabled = true; btn.style.opacity = '0.6';
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.addScope('email');
+                provider.addScope('profile');
+                try {
+                    // Try popup first (desktop)
+                    const result = await auth.signInWithPopup(provider);
+                    await _handleGoogleUser(result.user.email.toLowerCase());
+                } catch (popErr) {
+                    // Popup blocked (mobile/strict browser) → redirect
+                    if (popErr.code === 'auth/popup-blocked' ||
+                        popErr.code === 'auth/cancelled-popup-request' ||
+                        popErr.code === 'auth/operation-not-supported-in-this-environment') {
+                        await auth.signInWithRedirect(provider);
+                        // Page redirects — result handled by getRedirectResult above on reload
+                    } else if (popErr.code !== 'auth/popup-closed-by-user') {
+                        throw popErr;
+                    }
+                }
+            } catch(err) {
+                showNotify('Google Sign In failed: ' + (err.message || err.code), 'error');
+            } finally {
+                btn.disabled = false; btn.style.opacity = '1';
+            }
+        }
+        async function googleSetupComplete() {
+            const uname   = document.getElementById('gsetup-username').value.trim().toLowerCase();
+            const pass    = document.getElementById('gsetup-password').value;
+            const confirm = document.getElementById('gsetup-confirm').value;
+            const st      = document.getElementById('gsetup-status');
+            const loader  = document.getElementById('gsetup-loader');
+            st.style.color = '#ff3366';
+            if (uname.length < 3 || !/^[a-z0-9]+$/.test(uname)) { st.innerText = 'Username: min 3 chars, letters & numbers only.'; return; }
+            if (pass.length < 3) { st.innerText = 'Password: min 3 chars.'; return; }
+            if (pass !== confirm) { st.innerText = 'Passwords do not match.'; return; }
+            if (!_pendingGoogle) { st.innerText = 'Session expired. Please try again.'; return; }
+            loader.style.display = 'block'; st.innerText = '';
+            try {
+                const [userSnap, emailSnap] = await Promise.all([
+                    db.ref('users/' + uname).once('value'),
+                    db.ref('users').orderByChild('email').equalTo(_pendingGoogle.email).once('value')
+                ]);
+                if (userSnap.exists()) { loader.style.display='none'; st.innerText='Username taken! Choose another.'; return; }
+                if (emailSnap.exists()) { loader.style.display='none'; st.innerText='This Google email is already registered.'; return; }
+                const passwordHash = await hashPw(pass);
+                const userData = { password:passwordHash, score:0, dino_highscore:0, flappy_highscore:0, snake_highscore:0, pacman_highscore:0, createdAt:Date.now(), email:_pendingGoogle.email, emailVerified:true, googleEmail:_pendingGoogle.email };
+                await db.ref('users/' + uname).set(userData);
+                gasCall({ action:'send-welcome', email:_pendingGoogle.email, username:uname }).catch(()=>{});
+                _pendingGoogle = null;
+                loader.style.display = 'none'; st.style.color='#00ff88'; st.innerText = 'Account created!';
+                setTimeout(() => loginSuccess(uname, userData), 700);
+            } catch(e) { loader.style.display='none'; st.innerText='Error: ' + e.message; }
+        }
+        function googleSetupCancel() { _pendingGoogle = null; MapsTo('section-login', 'left'); }
+
+        // ── FORGOT PASSWORD ───────────────────────────────────────────────
+        let _forgotEmail = '';
+        function openForgotPassword() {
+            _forgotEmail = '';
+            document.getElementById('forgot-step1').style.display = 'block';
+            document.getElementById('forgot-step2').style.display = 'none';
+            document.getElementById('forgot-step-desc').innerText = 'Enter your registered email.';
+            document.getElementById('forgot-status').innerText = '';
+            document.getElementById('forgot-email').value = '';
+            document.getElementById('forgot-code').value = '';
+            document.getElementById('forgot-newpass').value = '';
+            document.getElementById('forgot-modal').style.display = 'flex';
+        }
+        function closeForgotPassword() { document.getElementById('forgot-modal').style.display = 'none'; }
+        async function forgotSendCode() {
+            const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+            const st    = document.getElementById('forgot-status');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { st.style.color='#ff3366'; st.innerText='Enter a valid email.'; return; }
+            st.style.color='#00f3ff'; st.innerText='Searching account...';
+            const snap = await db.ref('users').orderByChild('email').equalTo(email).once('value');
+            if (!snap.exists()) { st.style.color='#ff3366'; st.innerText='No account found with this email.'; return; }
+            let foundUser = '', foundData = {};
+            snap.forEach(c => { foundUser = c.key; foundData = c.val(); });
+            // SECURITY: only verified emails can reset password
+            if (foundData.emailVerified !== true) {
+                st.style.color='#ff3366';
+                st.innerText='Email not verified. Verify your email first before resetting password.';
+                return;
+            }
+            st.innerText = 'Sending code...';
+            const res = await gasCall({ action:'send-code', email, username:foundUser, purpose:'reset' });
+            if (res.ok) {
+                _forgotEmail = email;
+                document.getElementById('forgot-step1').style.display = 'none';
+                document.getElementById('forgot-step2').style.display = 'block';
+                document.getElementById('forgot-step-desc').innerText = 'Code sent! Check your inbox.';
+                st.style.color='#00ff88'; st.innerText = 'Code sent to ' + email;
+            } else { st.style.color='#ff3366'; st.innerText = res.error || 'Failed to send code.'; }
+        }
+        async function forgotVerifyCode() {
+            const code    = document.getElementById('forgot-code').value.trim();
+            const newPass = document.getElementById('forgot-newpass').value;
+            const st      = document.getElementById('forgot-status');
+            if (!code || code.length !== 6) { st.style.color='#ff3366'; st.innerText='Enter the 6-digit code.'; return; }
+            if (newPass.length < 3) { st.style.color='#ff3366'; st.innerText='Password too short (min 3 chars).'; return; }
+            st.style.color='#00f3ff'; st.innerText='Verifying...';
+            const res = await gasCall({ action:'verify-code', email:_forgotEmail, code });
+            if (!res.ok) { st.style.color='#ff3366'; st.innerText = res.error || 'Wrong code.'; return; }
+            const snap = await db.ref('users').orderByChild('email').equalTo(_forgotEmail).once('value');
+            let foundUser = ''; snap.forEach(c => { foundUser = c.key; });
+            await db.ref('users/' + foundUser).update({ password: await hashPw(newPass) });
+            st.style.color='#00ff88'; st.innerText = 'Password reset! You can now login.';
+            setTimeout(closeForgotPassword, 2000);
+        }
+
         document.getElementById('login-password').addEventListener('keypress', e => { if (e.key === 'Enter') processAuth(); });
+
 
         // ─── TROUBLESHOOT ───
         function goToTroubleshoot() {
@@ -10703,7 +11219,7 @@ function disableGlobalZoom() {
                 const d = snap.val();
                 if (!snap.exists() || (d && d.blocked)) {
                     showNotify(d && d.blocked ? 'Account BLOCKED by Admin!' : 'Access Denied!', 'error');
-                    localStorage.removeItem('isLoggedIn'); localStorage.removeItem('playerName');
+                    localStorage.clear();
                     LC.leave('section-hub'); MapsTo('section-login', 'left');
                 }
             });
@@ -10793,51 +11309,61 @@ function disableGlobalZoom() {
         function renderHubNotifs() {
             const list = document.getElementById('notif-messages');
             const mn = (localStorage.getItem('playerName') || '').toLowerCase().trim();
-            list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">Loading...</div>';
+            const lastRead = parseInt(localStorage.getItem('lastReadNotif') || '0');
+            list.innerHTML = '<div class="notif-empty"><div class="notif-empty-icon">⏳</div><div class="notif-empty-text">Loading…</div></div>';
+
+            function _fmtAgo(ts) {
+                if (!ts) return '';
+                const diff = Date.now() - ts;
+                const m = Math.floor(diff / 60000);
+                if (m < 1) return 'Just now';
+                if (m < 60) return m + 'm ago';
+                const h = Math.floor(m / 60);
+                if (h < 24) return h + 'h ago';
+                const d = Math.floor(h / 24);
+                return d + 'd ago';
+            }
+
+            function _buildItem(msg, type) {
+                const isNew = msg.time && msg.time > lastRead;
+                const div = document.createElement('div');
+                div.className = 'notif-item' + (type === 'private' ? ' private' : '');
+                if (isNew) div.style.background = type === 'private'
+                    ? 'rgba(168,85,247,0.08)' : 'rgba(46,204,113,0.06)';
+                div.innerHTML = `
+                    <div class="notif-item-header">
+                        <span class="notif-item-badge ${type === 'global' ? 'global-badge' : 'private-badge'}">
+                            ${type === 'global' ? '📢 GLOBAL' : '🔒 PRIVATE'}
+                        </span>
+                        ${isNew ? '<span style="font-size:.6rem;background:linear-gradient(90deg,#ff3366,#ff6b35);color:white;padding:1px 6px;border-radius:10px;font-family:Segoe UI,sans-serif;font-weight:700;">NEW</span>' : ''}
+                    </div>
+                    <div class="notif-item-msg">${msg.message || ''}</div>
+                    <div class="notif-time">${_fmtAgo(msg.time)}</div>
+                `;
+                return div;
+            }
 
             if (currentNotifTab === 'global') {
                 db.ref('notifications/global').once('value', snap => {
                     const all = snap.val();
                     if (!all || Object.keys(all).length === 0) {
-                        list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">No global announcements</div>';
+                        list.innerHTML = '<div class="notif-empty"><div class="notif-empty-icon">📭</div><div class="notif-empty-text">No announcements yet</div></div>';
                         return;
                     }
-                    const msgs = [];
-                    Object.values(all).forEach(msg => msgs.push({ ...msg, type: 'global' }));
-                    msgs.sort((a, b) => b.time - a.time);
+                    const msgs = Object.values(all).sort((a, b) => b.time - a.time);
                     list.innerHTML = '';
-                    msgs.forEach(msg => {
-                        const div = document.createElement('div');
-                        div.className = 'notif-item';
-                        div.innerHTML = `
-                    <div style="font-weight:bold; color:#2ecc71;">📢 GLOBAL</div>
-                    <div style="margin:8px 0;">${msg.message}</div>
-                    <div class="notif-time">${formatIST(msg.time)}</div>
-                `;
-                        list.appendChild(div);
-                    });
+                    msgs.forEach(msg => list.appendChild(_buildItem(msg, 'global')));
                 });
             } else {
                 db.ref('notifications/private/' + mn).once('value', snap => {
                     const all = snap.val();
                     if (!all || Object.keys(all).length === 0) {
-                        list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">No private messages</div>';
+                        list.innerHTML = '<div class="notif-empty"><div class="notif-empty-icon">🔐</div><div class="notif-empty-text">No private messages</div></div>';
                         return;
                     }
-                    const msgs = [];
-                    Object.values(all).forEach(msg => msgs.push({ ...msg, type: 'private' }));
-                    msgs.sort((a, b) => b.time - a.time);
+                    const msgs = Object.values(all).sort((a, b) => b.time - a.time);
                     list.innerHTML = '';
-                    msgs.forEach(msg => {
-                        const div = document.createElement('div');
-                        div.className = 'notif-item private';
-                        div.innerHTML = `
-                    <div style="font-weight:bold; color:#ff0055;">🔒 PRIVATE</div>
-                    <div style="margin:8px 0;">${msg.message}</div>
-                    <div class="notif-time">${formatIST(msg.time)}</div>
-                `;
-                        list.appendChild(div);
-                    });
+                    msgs.forEach(msg => list.appendChild(_buildItem(msg, 'private')));
                 });
             }
         }
@@ -10881,9 +11407,10 @@ function disableGlobalZoom() {
         // Periodic check
         setInterval(() => {
             if (localStorage.getItem('isLoggedIn') !== 'true') {
-                MapsTo('section-login', 'left');
+                const safe = ['section-login','section-troubleshoot','section-verify-email','section-google-setup'];
+                if (!safe.includes(currentSection)) MapsTo('section-login', 'left');
             }
-        }, 1000); 
+        }, 1000);
        /* function logout() {
             // Reset admin state on logout
             window._adminReadOnly = false;
@@ -11032,9 +11559,8 @@ function disableGlobalZoom() {
     const s = gameMap[k];
     if (!s) return;
     if (k === 'arcadecraft') {
-        // WASM game — open in new tab for full compatibility
         _setUserStatus('⛏️ Playing ArcadeCraft');
-        window.open('eaglercraft.html', '_blank');
+        window.location.href = 'eaglercraft.html';
         return;
     }
     if (k === 'quiz') { if (typeof quizOpenRulesModal === 'function') quizOpenRulesModal(); else MapsTo(s, 'right'); return; }
@@ -11132,38 +11658,54 @@ function disableGlobalZoom() {
                 ' — from ' + username + ' | IST: ' + istTime;
 
             try {
-                let res;
-                if (file) {
-                    // ── Multipart send (supports file attachment) ─────────
-                    statusEl.innerText = 'Uploading file...';
-                    const fd = new FormData();
-                    fd.append('email', email);
-                    fd.append('_subject', prettySubject);
-                    fd.append('message', formattedMsg);
-                    fd.append('_captcha', 'false');
-                    fd.append('_template', 'table');
-                    fd.append('attachment', file, file.name);
-                    res = await fetch('https://formsubmit.co/anurag670singh@gmail.com', {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json' },
-                        body: fd
-                    });
-                } else {
-                    // ── JSON send (text only, faster) ─────────────────────
-                    res = await fetch('https://formsubmit.co/ajax/anurag670singh@gmail.com', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                        body: JSON.stringify({
-                            email,
-                            _subject: prettySubject,
-                            message: formattedMsg,
-                            _captcha: 'false'
-                        })
-                    });
+                let sent = false;
+
+                // ── PRIMARY: GAS backend ──────────────────────────────────
+                if (!file) {
+                    try {
+                        statusEl.innerText = 'Sending via mail server...';
+                        const gasRes = await gasCall({
+                            action: 'send-contact',
+                            fromEmail: email,
+                            username,
+                            subject: subject || 'General Inquiry',
+                            message: cleanMsg
+                        });
+                        if (gasRes.ok) sent = true;
+                    } catch(gasErr) { /* fall through to formsubmit */ }
                 }
 
-                const data = await res.json().catch(function() { return { success: res.ok ? 'true' : 'false' }; });
-                if (data.success === 'true' || data.success === true) {
+                if (!sent) {
+                    // ── FALLBACK: FormSubmit ──────────────────────────────
+                    let res;
+                    if (file) {
+                        statusEl.innerText = 'Uploading file...';
+                        const fd = new FormData();
+                        fd.append('email', email);
+                        fd.append('_subject', prettySubject);
+                        fd.append('message', formattedMsg);
+                        fd.append('_captcha', 'false');
+                        fd.append('_template', 'table');
+                        fd.append('attachment', file, file.name);
+                        res = await fetch('https://formsubmit.co/anurag670singh@gmail.com', {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            body: fd
+                        });
+                    } else {
+                        statusEl.innerText = 'Trying backup server...';
+                        res = await fetch('https://formsubmit.co/ajax/anurag670singh@gmail.com', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({ email, _subject: prettySubject, message: formattedMsg, _captcha: 'false' })
+                        });
+                    }
+                    const data = await res.json().catch(function() { return { success: res.ok ? 'true' : 'false' }; });
+                    if (data.success === 'true' || data.success === true) sent = true;
+                    else throw new Error('Send failed');
+                }
+
+                if (sent) {
                     statusEl.style.color = '#00ff88';
                     statusEl.innerText = '✅ Message sent!' + (file ? ' (with attachment)' : '');
                     document.getElementById('contact-form').reset();
@@ -12365,9 +12907,11 @@ function disableGlobalZoom() {
                     var vh = await _getViewerHash();
 
                     function _doOpenAdmin() {
-                        // Hide modal first
+                        // Hide BOTH admin login modals (al-modal and admin-login-overlay)
                         var alm = document.getElementById('al-modal');
                         if (alm) alm.style.display = 'none';
+                        var overlay = document.getElementById('admin-login-overlay');
+                        if (overlay) overlay.classList.remove('al-show');
                         if (pass) pass.value = '';
                         if (eEl) eEl.innerText = '';
                         // Navigate to admin panel
@@ -13113,8 +13657,7 @@ showSection('global', document.querySelector('.admin-btn'));
                                     initHub();
                                     MapsTo('section-hub', 'right');
                                 } else {
-                                    localStorage.removeItem('isLoggedIn');
-                                    localStorage.removeItem('playerName');
+                                    localStorage.clear();
                                     hideLoader();
                                 }
                             })
@@ -14236,7 +14779,9 @@ window.loadFairCopies = function() {
                     db.ref('users/' + pn + '/quiz_played/' + _weekKey).set(true);
                     _loadLb('quiz-result-lb', function (rank) {
                         document.getElementById('quiz-res-rank').innerText = rank > 0 ? '#' + rank : '—';
-                        _awardMedals();
+                        // Medals are awarded per-week at the START of the next week via _awardPrevWeek().
+                        // Do NOT call _awardMedals() here — it had no guard and would award medals
+                        // to the current top-3 on every quiz completion, causing runaway medal counts.
                     });
                 });
             }
@@ -14330,23 +14875,28 @@ window.loadFairCopies = function() {
                 });
             };
 
-            var _awardingInProgress = false;  // prevent double-award on same device
+            var _awardedWeeks = new Set();  // tracks which prev-week keys we've tried this session
             function _awardPrevWeek() {
-                if (_awardingInProgress) return;
                 var prevKey = 'week_' + (_weekNum - 1);
-                // Use a transaction on the 'awarded' flag so only ONE client awards medals
+                // Session-level guard (prevents multiple concurrent calls for the same week)
+                if (_awardedWeeks.has(prevKey)) return;
+                _awardedWeeks.add(prevKey);
+                // Firebase transaction is the cross-client/cross-session guard
                 db.ref('quiz/' + prevKey + '/awarded').transaction(function(current) {
                     // If already awarded, abort (return undefined)
                     if (current === true) return; // abort
                     return true; // mark as awarded atomically
                 }, function(err, committed, snap) {
-                    if (err || !committed) return; // another client already won the race
-                    _awardingInProgress = true;
+                    if (err || !committed) {
+                        // Race lost or error — remove from local set so next session can retry if needed
+                        _awardedWeeks.delete(prevKey);
+                        return;
+                    }
+                    // We won the race — now award medals to top 3 unique users
                     db.ref('quiz/' + prevKey + '/lb').once('value').then(function(snap) {
                         var entries = _sortEntries(snap);
-                        if (!entries.length) { _awardingInProgress = false; return; }
+                        if (!entries.length) return;
                         var meds = ['gold', 'silver', 'bronze'];
-                        // Award top 3 unique users only
                         var awarded = new Set();
                         var rank = 0;
                         entries.forEach(function(e) {
@@ -14355,7 +14905,6 @@ window.loadFairCopies = function() {
                             db.ref('users/' + e.id + '/quiz_medals/' + meds[rank]).transaction(function(v) { return (v || 0) + 1; });
                             rank++;
                         });
-                        _awardingInProgress = false;
                     });
                 });
             }
@@ -14489,8 +15038,8 @@ window.loadFairCopies = function() {
             }, 400);
             // Medals handled inside openProfileCard directly
 
-            // ── PATCH lbSelectGame for Quiz tab ───────────────────────────────
-            setTimeout(function () {
+            // ── PATCH lbSelectGame for Quiz tab (runs immediately — lbSelectGame is defined above) ─
+            (function() {
                 var orig = window.lbSelectGame;
                 if (typeof orig === 'function') {
                     window.lbSelectGame = function (gk, btn) {
@@ -14501,13 +15050,16 @@ window.loadFairCopies = function() {
                             var loading = document.getElementById('lb-loading');
                             if (loading) loading.style.display = 'none';
                             if (!list) return;
+                            // Show skeleton first
+                            list.innerHTML = [1,2,3].map(function(){return '<div class="rank-item skeleton" style="height:48px;margin-bottom:8px;">&nbsp;</div>';}).join('');
                             var wn = _calcWeek();
-                            list.innerHTML = '<div style="text-align:center;padding:10px;color:rgba(255,255,255,.4);font-size:.75rem;letter-spacing:1px;">🧠 QUIZ · WEEK ' + wn + '</div>';
                             var pn = (localStorage.getItem('playerName') || '').toLowerCase().trim();
                             db.ref('quiz/week_' + wn + '/lb').once('value').then(function (snap) {
                                 var entries = _sortEntries(snap);
+                                list.innerHTML = '<div style="text-align:center;padding:10px;color:rgba(255,255,255,.4);font-size:.75rem;letter-spacing:1px;">🧠 QUIZ · WEEK ' + wn + '</div>';
                                 if (!entries.length) { list.innerHTML += '<div style="text-align:center;padding:16px;color:rgba(255,255,255,.3);font-size:.82rem;">No quiz entries yet this week</div>'; return; }
                                 var meds = ['🥇', '🥈', '🥉'];
+                                var myRankBar = document.getElementById('lb-my-rank-bar');
                                 entries.forEach(function (e, i) {
                                     var isMe = e.id === pn;
                                     var div = document.createElement('div');
@@ -14515,6 +15067,15 @@ window.loadFairCopies = function() {
                                     div.innerHTML = '<span style="font-size:' + (i < 3 ? '1.4rem' : '.9rem') + ';min-width:28px;text-align:center;">' + (i < 3 ? meds[i] : '#' + (i + 1)) + '</span>' +
                                         '<span style="flex:1;font-family:Teko,sans-serif;font-size:1.2rem;letter-spacing:1px;color:' + (isMe ? '#2ecc71' : 'white') + ';">' + e.id.charAt(0).toUpperCase() + e.id.slice(1) + '</span>' +
                                         '<div style="text-align:right;"><div style="font-family:Teko,sans-serif;color:#00f3ff;">' + _fmtMs(e.d.time) + '</div><div style="font-size:.7rem;color:rgba(255,255,255,.4);">' + e.d.correct + '/20</div></div>';
+                                    if (isMe) {
+                                        // Show my rank bar for quiz too
+                                        if (myRankBar) {
+                                            document.getElementById('lb-my-rank-info').innerText = '#' + (i+1) + ' · ' + (pn.charAt(0).toUpperCase() + pn.slice(1));
+                                            document.getElementById('lb-my-rank-score').innerText = e.d.correct + '/20 · ' + _fmtMs(e.d.time);
+                                            myRankBar.classList.add('show');
+                                        }
+                                    }
+                                    div.onclick = function () { openProfileCard && openProfileCard(e.id); };
                                     list.appendChild(div);
                                 });
                             });
@@ -14523,7 +15084,7 @@ window.loadFairCopies = function() {
                         orig(gk, btn);
                     };
                 }
-            }, 250);
+            })();
 
             // ── PATCH MapsTo to init quiz section ─────────────────────────────
             setTimeout(function () {
@@ -14543,17 +15104,7 @@ window.loadFairCopies = function() {
             }, 600);
 
         })(); // end quiz IIFE
-        // For clarity, I'll provide the modified MapsTo section for you to copy/paste (only the part that changes).
-        function launchAdminEntry() {
-    // Show admin login modal
-    var alm = document.getElementById('al-modal');
-    if (alm) {
-        alm.style.display = 'flex';
-        document.getElementById('al-error').innerText = '';
-        document.getElementById('al-pass-input').value = '';
-        setTimeout(function() { document.getElementById('al-pass-input').focus(); }, 100);
-    }
-}
+        // launchAdminEntry is defined inside the admin IIFE above (uses matrix-rain + admin-login-overlay)
     </script>
 </body>
 
